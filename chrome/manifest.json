@@ -4,7 +4,7 @@
     "version": "1.0",
     "description": "Posts a random Twitch emote every 13-15 minutes to stay counted as a viewer.",
     "homepage_url": "https://github.com/MidnightWolf420/Better-Twitch-Lurk",
-    "permissions": [ "activeTab", "storage", "scripting" ],
+    "permissions": [ "activeTab" ],
     "host_permissions": ["*://*.twitch.tv/*"],
     "content_scripts": [
         {
