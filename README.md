@@ -1,2 +1,11 @@
+
+<img width="1400" height="560" alt="Marquee" src="https://github.com/user-attachments/assets/18df670d-d725-432c-a77d-78a2541c6849" />
 # Better-Twitch-Lurk
 Posts a random Twitch emote every 13-15 minutes to stay counted as a viewer.
+
+## How To Install
+### Chrome
+[Better-Twitch-Lurk Chrome.webm](https://github.com/user-attachments/assets/eb1d137a-8bca-4f42-bb2a-bc766aa3908c)
+
+###Firefox
+[Better-Twitch-Lurk Firefox.webm](https://github.com/user-attachments/assets/14add06f-c8c3-4491-b7e2-2c8d07befa41)
