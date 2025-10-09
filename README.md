@@ -1,5 +1,5 @@
 # Better-Twitch-Lurk
-<img width="1400" height="560" alt="Marquee" src="https://github.com/user-attachments/assets/18df670d-d725-432c-a77d-78a2541c6849" />
+<img width="1400" height="560" alt="Banner" src="https://github.com/user-attachments/assets/142038e8-fdb3-4699-83f9-b84ce30d9d85" />
 Posts a random Twitch emote every 13-15 minutes to stay counted as a viewer.
 
 ## How To Install
