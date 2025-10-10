@@ -3,7 +3,6 @@ let dbName = "BetterTwitchLurkDB";
 let lastEnabledState = null;
 let emoteList = [];
 let oldStreamInfo;
-let nextMessageId;
 let streamInfo;
 let oldChannel;
 let channel;
@@ -68,34 +67,6 @@ async function getSetting(key, defaultValue = null, storeName = "settings") {
     } catch {
         return defaultValue;
     }
-}
-
-function setNextMessageCountdown(end) {
-    waitForElementVisible("[aria-describedby='Exit-chat-container']", 25000).then(async() => {
-        if (nextMessageId) clearTimeout(nextMessageId);
-        nextMessageId = countdown(end, async (ts) => {
-            let parent = document.querySelector("[aria-describedby='Exit-chat-container']");
-            let timerEl = document.getElementById("nextMessage");
-        
-            if (await getSetting("showCountdown", false)) {
-                if (parent && !timerEl) {
-                    const div = document.createElement('div');
-                    div.id = "nextMessage";
-                    div.style.cssText = `margin-top: 6px; font-size: 12px; text-align: center;`;
-                    parent.appendChild(div);
-                    timerEl = div;
-                }
-                if (timerEl) {
-                    [...document.querySelectorAll("#nextMessage")].slice(1).forEach(el => el.remove());
-                    if(ts.value <= 0) {
-                        timerEl.innerHTML = ts.toHTML("strong").replace("<strong>", "<strong>Time Until Next Message: ");
-                    } else timerEl.innerHTML = "<strong>Time Until Next Message: 0 second</strong>"
-                }
-            } else {
-                if (timerEl) timerEl.remove();
-            }
-        }, countdown.HOURS | countdown.MINUTES | countdown.SECONDS);
-    }).catch(err => {})
 }
 
 function getRandomEmotes(count = 1) {
@@ -230,16 +201,17 @@ async function selectEmotes(emotes) {
     }
 }
 
-function sendMessage(emoteCount, delay) {
+function sendMessage(emoteCount) {
+    let delay = Math.round(randomFloat(13, 15) * 60 * 1000);
     waitForElementsVisible("[data-a-target='chat-input'] [data-a-target='emote-name']", emoteCount).then(async() => {
         document.querySelector("[data-a-target='chat-send-button']")?.click();
         waitForElementVisible("[data-test-selector='chat-rules-ok-button']", 3000).then(async() => {
             document.querySelector("[data-test-selector='chat-rules-ok-button']")?.click()
             await sleep(randomInteger(300, 600))
-            saveSetting(channel?.login, { lastMessage: new Date(), nextMessage: delay?new Date(Date.now() + delay):new Date() }, "lastMessage")
+            await saveSetting(channel?.login, { lastMessage: new Date(), nextMessage: new Date(Date.now() + delay) }, "lastMessage")
             console.log(`[BetterTwitchLurk] Sent ${emoteCount} Emote${emoteCount>1?"s":""}`);
-        }).catch(err => {
-            saveSetting(channel?.login, { lastMessage: new Date(), nextMessage: delay?new Date(Date.now() + delay):new Date() }, "lastMessage")
+        }).catch(async(err) => {
+            await saveSetting(channel?.login, { lastMessage: new Date(), nextMessage: new Date(Date.now() + delay) }, "lastMessage")
             console.log(`[BetterTwitchLurk] Sent ${emoteCount} Emote${emoteCount>1?"s":""}`);
         })
     }).catch(err => {})
@@ -264,7 +236,7 @@ async function sendEmotes() {
                         selectEmotes(getRandomEmotes(newCount));
                     }).catch(err => {})
                 }
-                sendMessage(newCount, randomFloat(13, 15) * 60 * 1000);
+                sendMessage(newCount);
             }
         }
     }
@@ -287,10 +259,8 @@ window.addEventListener("BetterTwitchLurk", (event) => {
         streamInfo = newStreamInfo;
     } else if(event.detail.type === "MessageSent") {
         let sentAt = new Date(event.detail.data.sentAt);
-        let nextMessageTime = new Date(sentAt + (randomFloat(13, 15) * 60 * 1000));
-        saveSetting(channel?.login, { lastMessage: sentAt, nextMessage: nextMessageTime }, "lastMessage")
+        saveSetting(channel?.login, { lastMessage: sentAt, nextMessage: new Date(sentAt + Math.round(randomFloat(13, 15) * 60 * 1000)) }, "lastMessage")
         console.log("[BetterTwitchLurk] Updated Last Message Sent At:", sentAt.toLocaleString().toUpperCase());
-        setNextMessageCountdown(nextMessageTime);
     }
 });
 
@@ -303,43 +273,27 @@ browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         getSetting(msg.key, msg.defaultValue).then(value => sendResponse({ value }));
         return true;
     }
-    if(msg.action === "send-emotes") {
-        sendEmotes();
-        return true;
-    }
 });
 
 let isSending = false;
 
 async function runAutoSendLoop() {
     try {
-        if (await getSetting("showCountdown", false)) {
-            const { nextMessage = Date.now() } = await getSetting(channel?.login, {}, "lastMessage");
-        
-            if (!nextMessageId) {
-                setNextMessageCountdown(nextMessage);
-            }
-        } else {
-            document.getElementById("nextMessage")?.remove();
-            clearInterval(nextMessageId);
-            nextMessageId = null;
+        if (!(await getSetting("autoEmoteEnabled", false)) || !channel?.login || !streamInfo?.isLive) {
+            setTimeout(runAutoSendLoop, 1000);
+            return;
         }
 
-        if (await getSetting("autoEmoteEnabled", false)) {
-            if (channel?.login && streamInfo?.isLive && !isSending) {
-                const data = await getSetting(channel?.login, null, "lastMessage");
-                const recentlyPosted = data?.lastMessage && (Date.now() - data.lastMessage < 60 * 1000);
-
-                if (!recentlyPosted && (!data || !data.nextMessage || Date.now() >= data.nextMessage)) {
-                    isSending = true;
-                    await sendEmotes();
-                    isSending = false;
-                }
-            }
+        const data = await getSetting(channel?.login, null, "lastMessage");
+        const now = Date.now();
+        const nextMsgTime = data?.nextMessage ? new Date(data.nextMessage).getTime() : Date.now();
+        if (!data || now >= nextMsgTime) {
+            const delay = Math.round(randomFloat(13, 15) * 60 * 1000);
+            await saveSetting(channel?.login, { lastMessage: new Date(), nextMessage: new Date(now + delay) }, "lastMessage");
+            //await sendEmotes();
         }
     } catch (err) {
         console.error("[BetterTwitchLurk] runAutoSendLoop error:", err);
-        isSending = false;
     } finally {
         setTimeout(runAutoSendLoop, 1000);
     }
@@ -347,10 +301,11 @@ async function runAutoSendLoop() {
 
 runAutoSendLoop();
 
-function injectfetchHook() {
-    const fetchHook = document.createElement('script');
-    fetchHook.src = (typeof browser !== "undefined" ? browser.runtime.getURL('fetchHook.js') : chrome.runtime.getURL('fetchHook.js'));
-    (document.head || document.documentElement).appendChild(fetchHook);
+function injectFetchHook() {
+    const script = document.createElement('script');
+    script.src = browser.runtime.getURL('fetchHook.js');
+    script.onload = () => script.remove();
+    (document.head || document.documentElement).appendChild(script);
 }
 
-injectfetchHook()
+injectFetchHook()
