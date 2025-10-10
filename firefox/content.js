@@ -1,6 +1,7 @@
 let indexedDBStores = ["settings", "lastMessage"];
 let dbName = "BetterTwitchLurkDB";
-let lastEnabledState = null;
+let isSending = false;
+let lastEnabledState;
 let emoteList = [];
 let oldStreamInfo;
 let streamInfo;
@@ -99,36 +100,43 @@ function getRandomEmotes(count = 1) {
     return result;
 }
 
-function waitForElementVisible(selector, timeout = 5000) {
+async function waitForElementVisible(selector, timeout = 5000, shouldReject = true) {
     return new Promise((resolve, reject) => {
-        const startTime = Date.now();
+        const intervalTime = 100;
+        let elapsed = 0;
 
-        const checkVisibility = () => {
+        const interval = setInterval(() => {
             const el = document.querySelector(selector);
             if (el && el.offsetParent !== null) {
+                clearInterval(interval);
                 resolve(el);
-            } else if (Date.now() - startTime > timeout) {
-                reject(new Error('Element not visible within timeout'));
-            } else {
-                requestAnimationFrame(checkVisibility);
+            } else if ((elapsed += intervalTime) >= timeout) {
+                clearInterval(interval);
+                if (shouldReject) {
+                    reject(new Error(`Element "${selector}" not found after ${timeout}ms`));
+                } else {
+                    resolve(null);
+                }
             }
-        };
-
-        checkVisibility();
+        }, intervalTime);
     });
 }
 
-function waitForElementsVisible(selector, count = 1, timeout = 5000) {
+async function waitForElementsVisible(selector, count = 1, timeout = 5000, shouldReject = true) {
     return new Promise((resolve, reject) => {
         const startTime = Date.now();
 
         const checkExistence = () => {
-            const elements = document.querySelectorAll(selector);
+            const elements = Array.from(document.querySelectorAll(selector)).filter(el => el.offsetParent !== null);
 
             if (elements.length >= count) {
                 resolve(elements);
             } else if (Date.now() - startTime > timeout) {
-                reject(new Error(`Expected ${count} elements, but found ${elements.length}`));
+                if (shouldReject) {
+                    reject(new Error(`Expected ${count} visible elements, but found ${elements.length}`));
+                } else {
+                    resolve(null);
+                }
             } else {
                 requestAnimationFrame(checkExistence);
             }
@@ -144,7 +152,7 @@ function isVisible(el) {
     return style.display !== 'none' && style.visibility !== 'hidden' && el.offsetParent !== null;
 }
 
-function clickEmoteSection(emote) {
+async function clickEmoteSection(emote) {
     let selector;
     let sectionName;
 
@@ -182,7 +190,7 @@ function randomFloat(min, max) {
     return Math.random() * (max - min) + min;
 }
 
-function sleep(ms) {
+async function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
@@ -191,30 +199,29 @@ async function selectEmotes(emotes) {
         clickEmoteSection(emote);
         await sleep(randomInteger(300, 600));
         let emoteButtonSelector = `button[data-test-selector="emote-button-clickable"]:has(img[src*="${emote.id}"])`;
-        waitForElementVisible(emoteButtonSelector).then(async() => {
-            await sleep(randomInteger(300, 600))
-            const emoteButton = document.querySelector(emoteButtonSelector);
-            emoteButton.click();
-            console.log(`[BetterTwitchLurk] Clicked Emote "${emote.token}"`);
-        }).catch(err => {})
+        await waitForElementVisible(emoteButtonSelector, 5000, false)
+        await sleep(randomInteger(300, 600))
+        const emoteButton = document.querySelector(emoteButtonSelector);
+        emoteButton.click();
+        console.log(`[BetterTwitchLurk] Clicked Emote "${emote.token}"`);
         await sleep(randomInteger(300, 600));
     }
 }
 
-function sendMessage(emoteCount) {
+async function sendMessage(emoteCount) {
     let delay = Math.round(randomFloat(13, 15) * 60 * 1000);
-    waitForElementsVisible("[data-a-target='chat-input'] [data-a-target='emote-name']", emoteCount).then(async() => {
-        document.querySelector("[data-a-target='chat-send-button']")?.click();
-        waitForElementVisible("[data-test-selector='chat-rules-ok-button']", 3000).then(async() => {
-            document.querySelector("[data-test-selector='chat-rules-ok-button']")?.click()
-            await sleep(randomInteger(300, 600))
-            await saveSetting(channel?.login, { lastMessage: new Date(), nextMessage: new Date(Date.now() + delay) }, "lastMessage")
-            console.log(`[BetterTwitchLurk] Sent ${emoteCount} Emote${emoteCount>1?"s":""}`);
-        }).catch(async(err) => {
-            await saveSetting(channel?.login, { lastMessage: new Date(), nextMessage: new Date(Date.now() + delay) }, "lastMessage")
-            console.log(`[BetterTwitchLurk] Sent ${emoteCount} Emote${emoteCount>1?"s":""}`);
-        })
-    }).catch(err => {})
+    await waitForElementsVisible("[data-a-target='chat-input'] [data-a-target='emote-name']", emoteCount, 5000, false);
+    document.querySelector("[data-a-target='chat-send-button']")?.click();
+    try {
+        await waitForElementVisible("[data-test-selector='chat-rules-ok-button']", 3000, true);
+        document.querySelector("[data-test-selector='chat-rules-ok-button']")?.click()
+        await sleep(randomInteger(300, 600))
+        await saveSetting(channel?.login, { lastMessage: new Date(), nextMessage: new Date(Date.now() + delay) }, "lastMessage");
+        console.log(`[BetterTwitchLurk] Sent ${emoteCount} Emote${emoteCount>1?"s":""}`);
+    } catch {
+        await saveSetting(channel?.login, { lastMessage: new Date(), nextMessage: new Date(Date.now() + delay) }, "lastMessage");
+        console.log(`[BetterTwitchLurk] Sent ${emoteCount} Emote${emoteCount>1?"s":""}`);
+    }
 }
 
 async function sendEmotes() {
@@ -231,12 +238,11 @@ async function sendEmotes() {
                     await selectEmotes(getRandomEmotes(newCount));
                 } else {
                     document.querySelector("[data-a-target='emote-picker-button']").click();
-                    waitForElementVisible("[data-a-target='emote-picker-button']").then(async() => {
-                        await sleep(randomInteger(300, 600))
-                        selectEmotes(getRandomEmotes(newCount));
-                    }).catch(err => {})
+                    await waitForElementVisible("[data-a-target='emote-picker-button']", 5000, false);
+                    await sleep(randomInteger(300, 600))
+                    await selectEmotes(getRandomEmotes(newCount));
                 }
-                sendMessage(newCount);
+                await sendMessage(newCount);
             }
         }
     }
@@ -275,18 +281,22 @@ browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }
 });
 
-let isSending = false;
-
 async function runAutoSendLoop() {
+    if (isSending) {
+        return setTimeout(runAutoSendLoop, 1000);
+    }
+
+    isSending = true;
     try {
-        if (!(await getSetting("autoEmoteEnabled", false)) || !channel?.login || !streamInfo?.isLive) {
-            setTimeout(runAutoSendLoop, 1000);
+        const autoEnabled = await getSetting("autoEmoteEnabled", false);
+        if (!autoEnabled || !channel?.login || !streamInfo?.isLive) {
             return;
         }
 
         const data = await getSetting(channel?.login, null, "lastMessage");
         const now = Date.now();
-        const nextMsgTime = data?.nextMessage ? new Date(data.nextMessage).getTime() : Date.now();
+        const nextMsgTime = data?.nextMessage ? new Date(data.nextMessage).getTime() : now;
+
         if (!data || now >= nextMsgTime) {
             const delay = Math.round(randomFloat(13, 15) * 60 * 1000);
             await saveSetting(channel?.login, { lastMessage: new Date(), nextMessage: new Date(now + delay) }, "lastMessage");
@@ -295,9 +305,11 @@ async function runAutoSendLoop() {
     } catch (err) {
         console.error("[BetterTwitchLurk] runAutoSendLoop error:", err);
     } finally {
+        isSending = false;
         setTimeout(runAutoSendLoop, 1000);
     }
 }
+
 
 runAutoSendLoop();
 

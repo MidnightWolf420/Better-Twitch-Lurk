@@ -39,6 +39,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const autoEmoteEnabled = await getSetting("autoEmoteEnabled", false);
     setToggleState(autoEmoteBtn, autoEmoteEnabled);
+
     const useRange = await getSetting("useRange", false);
     useRangeCheckbox.checked = useRange;
     singleCountContainer.style.display = useRange ? "none" : "block";
@@ -53,7 +54,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const newState = !currentState;
         setToggleState(autoEmoteBtn, newState);
         await saveSetting("autoEmoteEnabled", newState);
-    });
+    });     
 
     useRangeCheckbox.addEventListener("change", async () => {
         const checked = useRangeCheckbox.checked;
