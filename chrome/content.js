@@ -286,12 +286,10 @@ async function runAutoSendLoop() {
 
         const data = await getSetting(channel?.login, null, "lastMessage");
         const now = Date.now();
-        const nextMsgTime = data?.nextMessage ? new Date(data.nextMessage).getTime() : 0;
-
+        const nextMsgTime = data?.nextMessage ? new Date(data.nextMessage).getTime() : Date.now();
         if (!data || now >= nextMsgTime) {
             const delay = Math.round(randomFloat(13, 15) * 60 * 1000);
             await saveSetting(channel?.login, { lastMessage: new Date(), nextMessage: new Date(now + delay) }, "lastMessage");
-
             await sendEmotes();
         }
     } catch (err) {

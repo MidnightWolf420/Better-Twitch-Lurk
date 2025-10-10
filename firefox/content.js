@@ -290,7 +290,7 @@ async function runAutoSendLoop() {
         if (!data || now >= nextMsgTime) {
             const delay = Math.round(randomFloat(13, 15) * 60 * 1000);
             await saveSetting(channel?.login, { lastMessage: new Date(), nextMessage: new Date(now + delay) }, "lastMessage");
-            //await sendEmotes();
+            await sendEmotes();
         }
     } catch (err) {
         console.error("[BetterTwitchLurk] runAutoSendLoop error:", err);
