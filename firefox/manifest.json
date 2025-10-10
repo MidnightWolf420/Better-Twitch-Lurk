@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Better Twitch Lurk",
-    "version": "1.0.4",
+    "version": "1.0.7",
     "description": "Posts a random Twitch emote every 13-15 minutes to stay counted as a viewer.",
     "homepage_url": "https://github.com/MidnightWolf420/Better-Twitch-Lurk",
     "permissions": [ "activeTab" ],
@@ -16,7 +16,7 @@
     "web_accessible_resources": [
         {
           "matches": ["*://*.twitch.tv/*"],
-          "resources": ["fetchHook.js"]
+          "resources": ["fetchHook.js", "countdown.js"]
         }
     ],
     "action": {

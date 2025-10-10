@@ -30,6 +30,8 @@ function setToggleState(element, state) {
 
 document.addEventListener("DOMContentLoaded", async () => {
     const autoEmoteBtn = document.querySelector("#auto-emote-btn");
+    const showCountdownCheckbox = document.querySelector("#show-countdown");
+    const raidDisableCheckbox = document.querySelector("#raid-disable");
     const useRangeCheckbox = document.querySelector("#use-range");
     const singleCountContainer = document.querySelector("#single-count-container");
     const rangeCountContainer = document.querySelector("#range-count-container");
@@ -39,8 +41,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const autoEmoteEnabled = await getSetting("autoEmoteEnabled", false);
     setToggleState(autoEmoteBtn, autoEmoteEnabled);
-
+    const showCountdown = await getSetting("showCountdown", false);
+    const raidDisable = await getSetting("raidDisable", false);
     const useRange = await getSetting("useRange", false);
+    showCountdownCheckbox.checked = showCountdown;
+    raidDisableCheckbox.checked = raidDisable;
     useRangeCheckbox.checked = useRange;
     singleCountContainer.style.display = useRange ? "none" : "block";
     rangeCountContainer.style.display = useRange ? "block" : "none";
@@ -55,6 +60,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         setToggleState(autoEmoteBtn, newState);
         await saveSetting("autoEmoteEnabled", newState);
     });     
+
+    showCountdownCheckbox.addEventListener("change", async () => {
+        const checked = showCountdownCheckbox.checked;
+        await saveSetting("showCountdown", checked);
+    });
+
+    raidDisableCheckbox.addEventListener("change", async () => {
+        const checked = raidDisableCheckbox.checked;
+        await saveSetting("raidDisable", checked);
+    });
 
     useRangeCheckbox.addEventListener("change", async () => {
         const checked = useRangeCheckbox.checked;
