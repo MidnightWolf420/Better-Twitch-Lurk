@@ -5,6 +5,7 @@ let lastEnabledState;
 let emoteList = [];
 let oldStreamInfo;
 let streamInfo;
+let isFollowing;
 let oldChannel;
 let channel;
 
@@ -291,6 +292,15 @@ window.addEventListener("BetterTwitchLurk", async(event) => {
             console.log(`[BetterTwitchLurk] Streamer Is Raiding Out Disabling Auto Emote`);
             await saveSetting("autoEmoteEnabled", false);
         }
+    } else if(event.detail.type === "FollowingChannel") {
+        isFollowing = event?.detail?.data?.isFollowing;
+        if(event.detail.data.eventName === "FollowUser") {
+            console.log(`[BetterTwitchLurk] You Followed ${event?.detail?.data?.user?.displayName||event?.detail?.data?.user?.login}`);
+        } else if(event.detail.data.eventName === "UnfollowUser") {
+            console.log(`[BetterTwitchLurk] You Unfollowed ${event?.detail?.data?.user?.displayName||event?.detail?.data?.user?.login}`);
+        } else {
+            console.log(`[BetterTwitchLurk] You ${isFollowing?"Are":"Are Not"} Following ${event?.detail?.data?.user?.displayName||event?.detail?.data?.user?.login}`);
+        }
     }
 });
 
@@ -313,7 +323,7 @@ async function runAutoSendLoop() {
     isSending = true;
     try {
         const autoEnabled = await getSetting("autoEmoteEnabled", false);
-        if (!autoEnabled || !channel?.login || !streamInfo?.isLive) {
+        if (!autoEnabled || !channel?.login || !streamInfo?.isLive || (await getSetting("followedOnly", false) && !isFollowing)) {
             return;
         }
 

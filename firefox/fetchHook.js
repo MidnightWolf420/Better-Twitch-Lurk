@@ -82,6 +82,74 @@
                         }
                     }));
                 }
+
+                const followItem = items.find(item => item?.extensions?.operationName === "FollowButton_User" || item?.extensions?.operationName === "FollowButton_FollowUser" || item?.extensions?.operationName === "FollowButton_UnfollowUser");
+                if (followItem) {
+                    if(followItem?.extensions?.operationName === "FollowButton_User") {
+                        let channel = {
+                            id: followItem.data?.user?.id,
+                            displayName: followItem.data?.user?.displayName,
+                            login: followItem.data?.user?.login
+                        }
+
+                        if(channel.id === currentChannel.id) {
+                            let isFollowing = followItem.data?.user?.self?.follower && followItem.data?.user?.self?.follower?.followedAt;
+                            window.dispatchEvent(new CustomEvent("BetterTwitchLurk", {
+                                detail: {
+                                    type: "FollowingChannel",
+                                    data: {
+                                        eventName: "IsFollowing",
+                                        user: channel,
+                                        follower: followItem.data?.user?.self?.follower,
+                                        isFollowing
+                                    }
+                                }
+                            }));
+                        }
+                    } else if(followItem?.extensions?.operationName === "FollowButton_FollowUser") {
+                        let channel = {
+                            id: followItem.data?.followUser?.follow?.user?.id,
+                            displayName: followItem.data?.followUser?.follow?.user?.displayName,
+                            login: followItem.data?.followUser?.follow?.user?.login
+                        }
+
+                        if(channel.id === currentChannel.id) {
+                            let isFollowing = followItem.data?.followUser?.follow?.user?.self?.follower && followItem.data?.followUser?.follow?.user?.self?.follower?.followedAt;
+                            window.dispatchEvent(new CustomEvent("BetterTwitchLurk", {
+                                detail: {
+                                    type: "FollowingChannel",
+                                    data: {
+                                        eventName: "FollowUser",
+                                        user: channel,
+                                        follower: followItem.data?.followUser?.follow?.user?.self?.follower,
+                                        isFollowing
+                                    }
+                                }
+                            }));
+                        }
+                    } else if(followItem?.extensions?.operationName === "FollowButton_UnfollowUser") {
+                        let channel = {
+                            id: followItem.data?.unfollowUser?.follow?.user?.id,
+                            displayName: followItem.data?.unfollowUser?.follow?.user?.displayName,
+                            login: followItem.data?.unfollowUser?.follow?.user?.login
+                        }
+
+                        if(channel.id === currentChannel.id) {
+                            let isFollowing = false;
+                            window.dispatchEvent(new CustomEvent("BetterTwitchLurk", {
+                                detail: {
+                                    type: "FollowingChannel",
+                                    data: {
+                                        eventName: "UnfollowUser",
+                                        user: channel,
+                                        follower: null,
+                                        isFollowing
+                                    }
+                                }
+                            }));
+                        }
+                    }
+                }
             }
         } catch { }
         return response;

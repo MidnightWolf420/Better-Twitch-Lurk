@@ -15,15 +15,22 @@
     </div>
 
     <div class="setting-row">
-        <label style="font-weight: bold;">Show Countdown Until Next Message</label>
-        <button type="button" id="show-countdown-btn" class="btn btn-sm btn-toggle" aria-pressed="false">
+        <label style="font-weight: bold;">Disable After Raids</label>
+        <button type="button" id="raid-disable-btn" class="btn btn-sm btn-toggle" aria-pressed="false">
             <div class="handle"></div>
         </button>
     </div>
 
     <div class="setting-row">
-        <label style="font-weight: bold;">Disable After Raids</label>
-        <button type="button" id="raid-disable-btn" class="btn btn-sm btn-toggle" aria-pressed="false">
+        <label style="font-weight: bold;">Only Enable In Followed Channels</label>
+        <button type="button" id="followed-only-btn" class="btn btn-sm btn-toggle" aria-pressed="false">
+            <div class="handle"></div>
+        </button>
+    </div>
+
+    <div class="setting-row">
+        <label style="font-weight: bold;">Show Countdown Until Next Message</label>
+        <button type="button" id="show-countdown-btn" class="btn btn-sm btn-toggle" aria-pressed="false">
             <div class="handle"></div>
         </button>
     </div>
@@ -49,6 +56,8 @@
         <input type="number" min="1" max="35" id="emote-max" value="3">
     </div>
 
+    <script src="scripts/jquery.min.js"></script>
+    <script src="scripts/tether.min.js"></script>
     <script src="scripts/bootstrap.min.js"></script>
     <script src="settings.js"></script>
 </body>

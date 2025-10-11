@@ -39,8 +39,9 @@ function hideContainer(container) {
 
 document.addEventListener("DOMContentLoaded", async () => {
     const autoEmoteBtn = document.querySelector("#auto-emote-btn");
-    const showCountdownBtn = document.querySelector("#show-countdown-btn");
     const raidDisableBtn = document.querySelector("#raid-disable-btn");
+    const followedOnlyBtn = document.querySelector("#followed-only-btn");
+    const showCountdownBtn = document.querySelector("#show-countdown-btn");
     const useRangeBtn = document.querySelector("#use-range-btn");
     const emoteCountRow = document.querySelector("#emote-count-row");
     const emoteMinRow = document.querySelector("#emote-min-row");
@@ -52,11 +53,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     const autoEmoteEnabled = await getSetting("autoEmoteEnabled", false);
     const showCountdown = await getSetting("showCountdown", false);
     const raidDisable = await getSetting("raidDisable", false);
+    const followedOnly = await getSetting("followedOnly", false);
     const useRange = await getSetting("useRange", false);
 
     setToggleState(autoEmoteBtn, autoEmoteEnabled);
-    setToggleState(showCountdownBtn, showCountdown);
     setToggleState(raidDisableBtn, raidDisable);
+    setToggleState(followedOnlyBtn, followedOnly);
+    setToggleState(showCountdownBtn, showCountdown);
     setToggleState(useRangeBtn, useRange);
 
     if (useRange) {
@@ -79,16 +82,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         await saveSetting("autoEmoteEnabled", newState);
     });
 
-    showCountdownBtn.addEventListener("click", async () => {
-        const newState = showCountdownBtn.getAttribute("aria-pressed") !== "true";
-        setToggleState(showCountdownBtn, newState);
-        await saveSetting("showCountdown", newState);
-    });
-
     raidDisableBtn.addEventListener("click", async () => {
         const newState = raidDisableBtn.getAttribute("aria-pressed") !== "true";
         setToggleState(raidDisableBtn, newState);
         await saveSetting("raidDisable", newState);
+    });
+
+    followedOnlyBtn.addEventListener("click", async () => {
+        const newState = followedOnlyBtn.getAttribute("aria-pressed") !== "true";
+        setToggleState(followedOnlyBtn, newState);
+        await saveSetting("followedOnly", newState);
+    });
+
+    showCountdownBtn.addEventListener("click", async () => {
+        const newState = showCountdownBtn.getAttribute("aria-pressed") !== "true";
+        setToggleState(showCountdownBtn, newState);
+        await saveSetting("showCountdown", newState);
     });
 
     useRangeBtn.addEventListener("click", async () => {
