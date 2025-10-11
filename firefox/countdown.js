@@ -67,7 +67,7 @@ async function getSetting(key, defaultValue = null, storeName = "settings") {
 
                 let counterEl = document.getElementById("nextMessage");
                 let showCountdown = await getSetting("showCountdown", false);
-                nextMessageAt = (await getSetting(window.currentChannel?.login, null, "lastMessage"))?.nextMessage;
+                nextMessageAt = (await getSetting(window.currentChannel?.login, { nextMessage: new Date() }, "lastMessage"))?.nextMessage;
                 if (showCountdown) {
                     if (!counterEl) {
                         counterEl = document.createElement("div");
