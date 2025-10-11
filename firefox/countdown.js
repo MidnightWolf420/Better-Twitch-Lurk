@@ -1,47 +1,73 @@
-(() => {
-    window.addEventListener("load", () => {
-        const script = document.createElement("script");
-        script.src = "https://cdn.jsdelivr.net/npm/countdown@2.6/countdown.min.js";
-        script.onload = () => {
-            let nextMessageAt = new Date();
-            let showCountdown = true;
-            let lastCountdownRequest = 0;
+let indexedDBStores = ["settings", "lastMessage"];
+let dbName = "BetterTwitchLurkDB";
 
-            window.addEventListener("message", (event) => {
-                if (event.source !== window) return;
-                const msg = event.data;
-                if (msg?.eventName === "BetterTwitchLurkData") {
-                    if (msg?.type === "nextMessageAt") {
-                        if(msg.data?.nextMessage) nextMessageAt = msg.data?.nextMessage;
-                    } else if (msg?.type === "isCountdownEnabled") {
-                        showCountdown = msg.data;
-                    }
+async function openDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(dbName);
+        request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            indexedDBStores.forEach(storeName => {
+                if (!db.objectStoreNames.contains(storeName)) {
+                    db.createObjectStore(storeName);
                 }
             });
-
-            function getCountdownEnabled() {
-                const now = Date.now();
-                if (now - lastCountdownRequest < 1000) return;
-                lastCountdownRequest = now;
-                window.dispatchEvent(
-                    new CustomEvent("BetterTwitchLurk", {
-                        detail: {
-                            type: "isCountdownEnabled"
+        };
+        request.onsuccess = async () => {
+            let db = request.result;
+            const missingStores = indexedDBStores.filter(name => !db.objectStoreNames.contains(name));
+            if (missingStores.length > 0) {
+                db.close();
+                const newVersion = db.version + 1;
+                const upgradeRequest = indexedDB.open(dbName, newVersion);
+                upgradeRequest.onupgradeneeded = (e) => {
+                    const upgradeDb = e.target.result;
+                    missingStores.forEach(storeName => {
+                        if (!upgradeDb.objectStoreNames.contains(storeName)) {
+                            upgradeDb.createObjectStore(storeName);
                         }
-                    })
-                );
+                    });
+                };
+                upgradeRequest.onsuccess = () => resolve(upgradeRequest.result);
+                upgradeRequest.onerror = () => reject(upgradeRequest.error);
+            } else {
+                resolve(db);
             }
+        };
+        request.onerror = () => reject(request.error);
+    });
+}
 
-            function updateCountdown() {
+async function getSetting(key, defaultValue = null, storeName = "settings") {
+    try {
+        const db = await openDB();
+        const tx = db.transaction(storeName, "readonly");
+        const request = tx.objectStore(storeName).get(key);
+        return new Promise((resolve) => {
+            request.onsuccess = () => resolve(request.result !== undefined ? request.result : defaultValue);
+            request.onerror = () => resolve(defaultValue);
+        });
+    } catch {
+        return defaultValue;
+    }
+}
+
+(async() => {
+    window.addEventListener("load", async() => {
+        const script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/countdown@2.6/countdown.min.js";
+        script.onload = async() => {
+            let nextMessageAt = new Date();
+
+            async function updateCountdown() {
                 const targetEl = document.querySelector('[aria-describedby="Exit-chat-container"]');
                 if (!targetEl) {
                     setTimeout(updateCountdown, 600);
                     return;
                 }
 
-                getCountdownEnabled();
                 let counterEl = document.getElementById("nextMessage");
-
+                let showCountdown = await getSetting("showCountdown", false);
+                nextMessageAt = (await getSetting(window.currentChannel?.login, null, "lastMessage"))?.nextMessage;
                 if (showCountdown) {
                     if (!counterEl) {
                         counterEl = document.createElement("div");

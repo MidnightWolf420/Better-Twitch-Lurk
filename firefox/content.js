@@ -239,7 +239,6 @@ async function sendMessage(emoteCount) {
     } catch {}
     let nextMessageAt = new Date(Date.now() + delay);
     await saveSetting(channel?.login, { lastMessage: new Date(), nextMessage: nextMessageAt }, "lastMessage");
-    sendToCountdown("nextMessageAt", nextMessageAt);
     console.log(`[BetterTwitchLurk] Sent ${emoteCount} Emote${emoteCount>1?"s":""}`);
 }
 
@@ -267,14 +266,6 @@ async function sendEmotes() {
     }
 }
 
-function sendToCountdown(type, data) {
-    window.postMessage({
-        eventName: "BetterTwitchLurkData",
-        type,
-        data
-    }, "*");
-}
-
 window.addEventListener("BetterTwitchLurk", async(event) => {
     if(event.detail.type === "EmotesUpdated") {
         console.log(`[BetterTwitchLurk] Updated List Of Emotes`);
@@ -293,12 +284,8 @@ window.addEventListener("BetterTwitchLurk", async(event) => {
     } else if(event.detail.type === "MessageSent") {
         let sentAt = new Date(event.detail.data.sentAt);
         let nextMessageAt = new Date(sentAt.getTime() + Math.round(randomFloat(13, 15) * 60 * 1000))
-        saveSetting(channel?.login, { lastMessage: sentAt, nextMessage: nextMessageAt }, "lastMessage")
-        sendToCountdown("nextMessageAt", nextMessageAt);
+        saveSetting(channel?.login, { lastMessage: sentAt, nextMessage: nextMessageAt }, "lastMessage");
         console.log("[BetterTwitchLurk] Updated Last Message Sent At:", sentAt.toLocaleString().toUpperCase());
-    } else if(event.detail.type === "isCountdownEnabled") {
-        sendToCountdown("isCountdownEnabled", await getSetting("showCountdown", false))
-        sendToCountdown("nextMessageAt", await getSetting(channel?.login, null, "lastMessage"))
     } else if(event.detail.type === "RaidingOut") {
         if(await getSetting("raidDisable", false)) {
             console.log(`[BetterTwitchLurk] Streamer Is Raiding Out Disabling Auto Emote`);
@@ -338,7 +325,6 @@ async function runAutoSendLoop() {
             const delay = Math.round(randomFloat(13, 15) * 60 * 1000);
             let nextMessageAt =  new Date(now + delay);
             await saveSetting(channel?.login, { lastMessage: new Date(), nextMessage: nextMessageAt }, "lastMessage");
-            sendToCountdown("nextMessageAt", nextMessageAt);
             await sendEmotes();
         }
     } catch (err) {

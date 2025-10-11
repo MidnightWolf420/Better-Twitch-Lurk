@@ -47,6 +47,7 @@
                         const stream = user.stream;
                         const userItem = { id: user.id, login: user.login };
                         currentChannel = userItem;
+                        window.currentChannel = currentChannel;
 
                         window.dispatchEvent(new CustomEvent("BetterTwitchLurk", {
                             detail: {
