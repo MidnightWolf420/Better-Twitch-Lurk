@@ -1,12 +1,9 @@
-let indexedDBStores = ["settings", "lastMessage"];
-let dbName = "BetterTwitchLurkDB";
-
-async function openDB() {
+async function openIndexedDB() {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(dbName);
+        const request = indexedDB.open("BetterTwitchLurkDB");
         request.onupgradeneeded = (e) => {
             const db = e.target.result;
-            indexedDBStores.forEach(storeName => {
+            ["settings", "lastMessage"].forEach(storeName => {
                 if (!db.objectStoreNames.contains(storeName)) {
                     db.createObjectStore(storeName);
                 }
@@ -14,11 +11,11 @@ async function openDB() {
         };
         request.onsuccess = async () => {
             let db = request.result;
-            const missingStores = indexedDBStores.filter(name => !db.objectStoreNames.contains(name));
+            const missingStores = ["settings", "lastMessage"].filter(name => !db.objectStoreNames.contains(name));
             if (missingStores.length > 0) {
                 db.close();
                 const newVersion = db.version + 1;
-                const upgradeRequest = indexedDB.open(dbName, newVersion);
+                const upgradeRequest = indexedDB.open("BetterTwitchLurkDB", newVersion);
                 upgradeRequest.onupgradeneeded = (e) => {
                     const upgradeDb = e.target.result;
                     missingStores.forEach(storeName => {
@@ -37,9 +34,9 @@ async function openDB() {
     });
 }
 
-async function getSetting(key, defaultValue = null, storeName = "settings") {
+async function getValue(key, defaultValue = null, storeName = "settings") {
     try {
-        const db = await openDB();
+        const db = await openIndexedDB();
         const tx = db.transaction(storeName, "readonly");
         const request = tx.objectStore(storeName).get(key);
         return new Promise((resolve) => {
@@ -66,8 +63,8 @@ async function getSetting(key, defaultValue = null, storeName = "settings") {
                 }
 
                 let counterEl = document.getElementById("nextMessage");
-                let showCountdown = await getSetting("showCountdown", false);
-                nextMessageAt = (await getSetting(window.currentChannel?.login, { nextMessage: new Date() }, "lastMessage"))?.nextMessage;
+                let showCountdown = await getValue("showCountdown", false);
+                nextMessageAt = (await getValue(window.currentChannel?.login, { nextMessage: new Date() }, "lastMessage"))?.nextMessage;
                 if (showCountdown) {
                     if (!counterEl) {
                         counterEl = document.createElement("div");

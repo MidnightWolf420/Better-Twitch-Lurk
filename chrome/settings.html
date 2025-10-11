@@ -1,41 +1,56 @@
 <!DOCTYPE html>
-<html style="max-width: 19rem; height: auto; min-width: 15rem;">
+<html style="max-width: 30rem; height: auto; min-width: 25rem;">
 <head>
     <title>Better Twitch Lurk Settings</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h3 style="padding-left: 0.5rem;">Better Twitch Lurk Settings</h3>
-    <label style="font-weight: bold; padding-left: 0.5rem;">Enable Auto Posting Emotes</label>
-    <br>
-    <button type="button" id="auto-emote-btn" class="btn btn-sm btn-toggle" aria-pressed="false">
-        <div class="handle"></div>
-    </button>
-    <br><br>
-    <label style="font-weight: bold; padding-left: 0.5rem;">Show Countdown Until Next Message</label>
-    <input type="checkbox" id="show-countdown" style="margin-left: 0.5rem;">
-    <br><br>
-    <label style="font-weight: bold; padding-left: 0.5rem;">Disable After Raids</label>
-    <input type="checkbox" id="raid-disable" style="margin-left: 0.5rem;">
-    <br><br>
-    <label style="font-weight: bold; padding-left: 0.5rem;">Use Range for Emote Count</label>
-    <input type="checkbox" id="use-range" style="margin-left: 0.5rem;">
-    <br><br>
-    <div id="single-count-container">
-        <label style="font-weight: bold; padding-left: 0.5rem;">Emote Count</label>
-        <input type="number" min="1" max="35" id="emote-count" value="1" style="margin-left: 0.5rem; width: 4rem; padding: 0.25rem; border-radius: 0.25rem; border: 1px solid #6b7381; background: #2b2b2b; color: #f2f2f2;">
+    <h3 class="title">Better Twitch Lurk Settings</h3>
+
+    <div class="setting-row">
+        <label style="font-weight: bold;">Enable Auto Posting Emotes</label>
+        <button type="button" id="auto-emote-btn" class="btn btn-sm btn-toggle" aria-pressed="false">
+            <div class="handle"></div>
+        </button>
     </div>
-    <div id="range-count-container" style="display:none;">
-        <div style="margin-bottom: 0.5rem;">
-            <label style="font-weight: bold; padding-left: 0.5rem;">Min Emotes</label>
-            <input type="number" min="1" max="35" id="emote-min" value="1" style="margin-left: 0.5rem; width: 3rem; padding: 0.25rem; border-radius: 0.25rem; border: 1px solid #6b7381; background: #2b2b2b; color: #f2f2f2;">
-        </div>
-        <div>
-            <label style="font-weight: bold; padding-left: 0.5rem;">Max Emotes</label>
-            <input type="number" min="1" max="35" id="emote-max" value="3" style="margin-left: 0.5rem; width: 3rem; padding: 0.25rem; border-radius: 0.25rem; border: 1px solid #6b7381; background: #2b2b2b; color: #f2f2f2;">
-        </div>
+
+    <div class="setting-row">
+        <label style="font-weight: bold;">Show Countdown Until Next Message</label>
+        <button type="button" id="show-countdown-btn" class="btn btn-sm btn-toggle" aria-pressed="false">
+            <div class="handle"></div>
+        </button>
     </div>
+
+    <div class="setting-row">
+        <label style="font-weight: bold;">Disable After Raids</label>
+        <button type="button" id="raid-disable-btn" class="btn btn-sm btn-toggle" aria-pressed="false">
+            <div class="handle"></div>
+        </button>
+    </div>
+
+    <div class="setting-row">
+        <label style="font-weight: bold;">Use Range for Emote Count</label>
+        <button type="button" id="use-range-btn" class="btn btn-sm btn-toggle" aria-pressed="false">
+            <div class="handle"></div>
+        </button>
+    </div>
+
+    <div id="emote-count-row" class="setting-row">
+        <label style="font-weight: bold;">Emote Count</label>
+        <input type="number" min="1" max="35" id="emote-count" value="1">
+    </div>
+
+    <div class="setting-row hidden" id="emote-min-row">
+        <label style="font-weight: bold;">Min Emotes</label>
+        <input type="number" min="1" max="35" id="emote-min" value="1">
+    </div>
+    <div class="setting-row hidden" id="emote-max-row">
+        <label style="font-weight: bold;">Max Emotes</label>
+        <input type="number" min="1" max="35" id="emote-max" value="3">
+    </div>
+
     <script src="scripts/bootstrap.min.js"></script>
     <script src="settings.js"></script>
 </body>
+
 </html>

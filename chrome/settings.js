@@ -1,25 +1,18 @@
 async function saveSetting(key, value) {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab) return;
-
-    return new Promise((resolve) => {
-        chrome.tabs.sendMessage(tab.id, { action: "save", key, value }, (response) => {
-            if (chrome.runtime.lastError || !response) resolve();
-            else resolve();
-        });
-    });
+    await chrome.tabs.sendMessage(tab.id, { action: "save", key, value });
 }
 
 async function getSetting(key, defaultValue = null) {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab) return defaultValue;
-
-    return new Promise((resolve) => {
-        chrome.tabs.sendMessage(tab.id, { action: "get", key, defaultValue }, (response) => {
-            if (chrome.runtime.lastError || !response) resolve(defaultValue);
-            else resolve(response.value ?? defaultValue);
-        });
-    });
+    try {
+        const response = await chrome.tabs.sendMessage(tab.id, { action: "get", key, defaultValue });
+        return response?.value ?? defaultValue;
+    } catch {
+        return defaultValue;
+    }
 }
 
 function setToggleState(element, state) {
@@ -34,54 +27,86 @@ function setToggleState(element, state) {
     }
 }
 
+function showContainer(container) {
+    container.classList.remove("hidden");
+    container.classList.add("visible");
+}
+
+function hideContainer(container) {
+    container.classList.remove("visible");
+    container.classList.add("hidden");
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     const autoEmoteBtn = document.querySelector("#auto-emote-btn");
-    const showCountdownCheckbox = document.querySelector("#show-countdown");
-    const raidDisableCheckbox = document.querySelector("#raid-disable");
-    const useRangeCheckbox = document.querySelector("#use-range");
-    const singleCountContainer = document.querySelector("#single-count-container");
-    const rangeCountContainer = document.querySelector("#range-count-container");
+    const showCountdownBtn = document.querySelector("#show-countdown-btn");
+    const raidDisableBtn = document.querySelector("#raid-disable-btn");
+    const useRangeBtn = document.querySelector("#use-range-btn");
+    const emoteCountRow = document.querySelector("#emote-count-row");
+    const emoteMinRow = document.querySelector("#emote-min-row");
+    const emoteMaxRow = document.querySelector("#emote-max-row");
     const emoteCountInput = document.querySelector("#emote-count");
     const emoteMinInput = document.querySelector("#emote-min");
     const emoteMaxInput = document.querySelector("#emote-max");
 
     const autoEmoteEnabled = await getSetting("autoEmoteEnabled", false);
-    setToggleState(autoEmoteBtn, autoEmoteEnabled);
     const showCountdown = await getSetting("showCountdown", false);
     const raidDisable = await getSetting("raidDisable", false);
     const useRange = await getSetting("useRange", false);
-    showCountdownCheckbox.checked = showCountdown;
-    raidDisableCheckbox.checked = raidDisable;
-    useRangeCheckbox.checked = useRange;
-    singleCountContainer.style.display = useRange ? "none" : "block";
-    rangeCountContainer.style.display = useRange ? "block" : "none";
+
+    setToggleState(autoEmoteBtn, autoEmoteEnabled);
+    setToggleState(showCountdownBtn, showCountdown);
+    setToggleState(raidDisableBtn, raidDisable);
+    setToggleState(useRangeBtn, useRange);
+
+    if (useRange) {
+        hideContainer(emoteCountRow);
+        showContainer(emoteMinRow);
+        showContainer(emoteMaxRow);
+    } else {
+        showContainer(emoteCountRow);
+        hideContainer(emoteMinRow);
+        hideContainer(emoteMaxRow);
+    }
 
     emoteCountInput.value = await getSetting("emoteCount", 1);
     emoteMinInput.value = await getSetting("emoteMin", 1);
     emoteMaxInput.value = await getSetting("emoteMax", 3);
 
     autoEmoteBtn.addEventListener("click", async () => {
-        const currentState = autoEmoteBtn.getAttribute("aria-pressed") === "true";
-        const newState = !currentState;
+        const newState = autoEmoteBtn.getAttribute("aria-pressed") !== "true";
         setToggleState(autoEmoteBtn, newState);
         await saveSetting("autoEmoteEnabled", newState);
-    });     
-
-    showCountdownCheckbox.addEventListener("change", async () => {
-        const checked = showCountdownCheckbox.checked;
-        await saveSetting("showCountdown", checked);
     });
 
-    raidDisableCheckbox.addEventListener("change", async () => {
-        const checked = raidDisableCheckbox.checked;
-        await saveSetting("raidDisable", checked);
+    showCountdownBtn.addEventListener("click", async () => {
+        const newState = showCountdownBtn.getAttribute("aria-pressed") !== "true";
+        setToggleState(showCountdownBtn, newState);
+        await saveSetting("showCountdown", newState);
     });
 
-    useRangeCheckbox.addEventListener("change", async () => {
-        const checked = useRangeCheckbox.checked;
-        singleCountContainer.style.display = checked ? "none" : "block";
-        rangeCountContainer.style.display = checked ? "block" : "none";
-        await saveSetting("useRange", checked);
+    raidDisableBtn.addEventListener("click", async () => {
+        const newState = raidDisableBtn.getAttribute("aria-pressed") !== "true";
+        setToggleState(raidDisableBtn, newState);
+        await saveSetting("raidDisable", newState);
+    });
+
+    useRangeBtn.addEventListener("click", async () => {
+        const newState = useRangeBtn.getAttribute("aria-pressed") !== "true";
+        setToggleState(useRangeBtn, newState);
+
+        if (newState) {
+            hideContainer(emoteCountRow);
+            showContainer(emoteMinRow);
+            showContainer(emoteMaxRow);
+        } else {
+            showContainer(emoteCountRow);
+            hideContainer(emoteMinRow);
+            hideContainer(emoteMaxRow);
+        }
+        
+
+        await saveSetting("useRange", newState);
     });
 
     emoteCountInput.addEventListener("change", async () => {
