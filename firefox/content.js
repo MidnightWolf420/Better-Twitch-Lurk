@@ -287,7 +287,7 @@ window.addEventListener("BetterTwitchLurk", async(event) => {
         saveSetting(channel?.login, { lastMessage: sentAt, nextMessage: nextMessageAt }, "lastMessage");
         console.log("[BetterTwitchLurk] Updated Last Message Sent At:", sentAt.toLocaleString().toUpperCase());
     } else if(event.detail.type === "RaidingOut") {
-        if(await getSetting("raidDisable", false)) {
+        if(await getSetting("raidDisable", false) && await getSetting("autoEmoteEnabled", false)) {
             console.log(`[BetterTwitchLurk] Streamer Is Raiding Out Disabling Auto Emote`);
             await saveSetting("autoEmoteEnabled", false);
         }

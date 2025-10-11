@@ -130,7 +130,6 @@
                             } catch { return; }
 
                             if (pubsub?.type === "raid_go_v2" && pubsub?.raid?.id) {
-                                console.log("[BetterTwitchLurk] Raid detected:", pubsub.raid);
                                 window.dispatchEvent(new CustomEvent("BetterTwitchLurk", {
                                     detail: {
                                         type: "RaidingOut",
