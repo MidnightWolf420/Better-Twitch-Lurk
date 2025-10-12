@@ -372,14 +372,6 @@ body {
     max-width: 22.5rem;
 }
 
-#emote-whitelist:hover {
-    cursor: default;
-}
-
-#emote-whitelist:not(:has(*:hover)) {
-    cursor: pointer;
-}
-
 #add-emotes {
     background-color: #808080;
     color: #fff;

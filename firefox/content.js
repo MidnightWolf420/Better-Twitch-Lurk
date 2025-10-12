@@ -374,7 +374,8 @@ browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if(msg.action === "open-emote-selector")  {
         if(!isVisible(document.querySelector("div.emote-picker__tab-content"))) document.querySelector("[data-a-target='emote-picker-button']")?.click();
         setTimeout(async() => emoteWhitelistMenu(), 500)
-        emoteButton.setAttribute("onclick", `
+        alert("Click Emotes In The Emote Selector To Whitelist Them.");
+        document.querySelector("[data-test-selector='emote-picker-close'], [data-a-target='emote-picker-button']").setAttribute("onclick", `
             document.querySelectorAll(".emote-picker__scroll-container [data-test-selector='emote-button-clickable']").forEach(e => e.removeAttribute("onclick"));
             this.removeAttribute('onclick');
         `);
