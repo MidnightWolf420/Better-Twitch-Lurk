@@ -57,7 +57,22 @@
         <label style="font-weight: bold;">Max Emotes</label>
         <input type="number" min="1" max="35" id="emote-max" value="3">
     </div>
-    
+    <div class="emote-input-container">
+        <div class="setting-row">
+            <label style="font-weight: bold;">Whitelist Emotes</label>
+            <button class="btn btn-dark" id="add-emotes" type="button">Add Emotes</button>
+        </div>
+        <div class="emote-input-wrapper-container">
+            <div id="emote-whitelist" class="emote-input-wrapper"></div>
+            <button class="remove-all-btn" id="remove-all-emotes">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x">
+                    <path d="M18 6 6 18"/>
+                    <path d="m6 6 12 12"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
     <script src="scripts/jquery.min.js"></script>
     <script src="scripts/tether.min.js"></script>
     <script src="scripts/bootstrap.min.js"></script>

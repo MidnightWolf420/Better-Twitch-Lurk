@@ -278,3 +278,119 @@ body {
     background: #2b2b2b;
     color: #f2f2f2;
 }
+
+.emote-card {
+    max-width: 31.25rem;
+    width: 100%;
+    border-radius: 1rem;
+    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.5);
+    padding: 1.25rem;
+    background: #3a3a3a;
+}
+
+.emote-input-container {
+    position: relative;
+}
+
+.emote-input-wrapper-container {
+    position: relative;
+}
+
+.emote-input-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.25rem;
+    padding: 0.25rem 0.375rem;
+    border: 0.0625rem solid #6b7381;
+    border-radius: 0.75rem;
+    background-color: #2b2b2b;
+    user-select: none;
+    cursor: default;
+    overflow-y: auto;
+    max-height: calc(3 * 1.75rem + 2 * 0.25rem + 0.5rem);
+    min-height: calc(1.75rem + 0.5rem);
+}
+
+.emote-input-wrapper::-webkit-scrollbar {
+    width: 0.375rem;
+}
+
+.emote-input-wrapper::-webkit-scrollbar-thumb {
+    background-color: #6b7381;
+    border-radius: 0.1875rem;
+}
+
+.emote-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.25rem;
+    background-color: #4a4a4a;
+    border-radius: 0.5rem;
+    flex: 0 0 auto;
+}
+
+.emote-chip img {
+    width: 1.75rem;
+    height: 1.75rem;
+    flex-shrink: 0;
+}
+
+.remove-btn {
+    background: transparent;
+    border: none;
+    font-size: 0.9rem;
+    color: #dc3545;
+    cursor: pointer;
+    padding: 0;
+}
+
+.remove-all-btn {
+    position: absolute;
+    top: 50%;
+    right: 1.25rem;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    color: #dc3545;
+    cursor: pointer;
+    line-height: 1;
+    z-index: 10;
+}
+
+.emote-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    padding-left: 0.5rem;
+    color: #ffffff;
+}
+
+#emote-whitelist {
+    max-width: 22.5rem;
+}
+
+#emote-whitelist:hover {
+    cursor: default;
+}
+
+#emote-whitelist:not(:has(*:hover)) {
+    cursor: pointer;
+}
+
+#add-emotes {
+    background-color: #808080;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+
+#add-emotes:hover {
+    background-color: #3a3a3a;
+}

@@ -48,6 +48,18 @@ async function getValue(key, defaultValue = null, storeName = "settings") {
     }
 }
 
+async function setValue(key, value, storeName = "settings") {
+    const db = await openIndexedDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, "readwrite");
+        const store = tx.objectStore(storeName);
+        const request = store.put(value, key);
+
+        request.onsuccess = () => resolve(true);
+        request.onerror = (e) => reject(e.target.error);
+    });
+}
+
 (async() => {
     window.addEventListener("load", async() => {
         const script = document.createElement("script");

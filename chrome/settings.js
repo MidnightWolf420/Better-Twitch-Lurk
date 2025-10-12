@@ -38,6 +38,7 @@ function hideContainer(container) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+
     const autoEmoteBtn = document.querySelector("#auto-emote-btn");
     const raidDisableBtn = document.querySelector("#raid-disable-btn");
     const followedOnlyBtn = document.querySelector("#followed-only-btn");
@@ -49,12 +50,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     const emoteCountInput = document.querySelector("#emote-count");
     const emoteMinInput = document.querySelector("#emote-min");
     const emoteMaxInput = document.querySelector("#emote-max");
+    const emoteWhitelistInput = document.querySelector("#emote-whitelist");
+    const addEmotesBtn = document.querySelector("#add-emotes");
+    const removeWhitelistedEmotesBtn = document.querySelector("#remove-all-emotes");
 
     const autoEmoteEnabled = await getSetting("autoEmoteEnabled", false);
     const showCountdown = await getSetting("showCountdown", false);
     const raidDisable = await getSetting("raidDisable", false);
     const followedOnly = await getSetting("followedOnly", false);
     const useRange = await getSetting("useRange", false);
+    let whitelistedEmotes = new Map(Object.entries(await getSetting("whitelistedEmotes", {})));
 
     setToggleState(autoEmoteBtn, autoEmoteEnabled);
     setToggleState(raidDisableBtn, raidDisable);
@@ -129,6 +134,82 @@ document.addEventListener("DOMContentLoaded", async () => {
     emoteMaxInput.addEventListener("change", async () => {
         await saveSetting("emoteMax", parseInt(emoteMaxInput.value) || 3);
     });
+
+    removeWhitelistedEmotesBtn.addEventListener("click", async () => {
+        removeAllEmotes();
+    });
+
+    addEmotesBtn.addEventListener("click", async (event) => {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab) return;
+        await chrome.tabs.sendMessage(tab.id, { action: "open-emote-selector" });
+    });
+
+
+
+    function renderWhitelistedEmotes() {
+        emoteWhitelistInput.querySelectorAll(".emote-chip").forEach(chip => chip.remove());
+    
+        whitelistedEmotes.forEach((emote, id) => {
+            const chip = document.createElement("div");
+            chip.className = "emote-chip";
+    
+            const img = document.createElement("img");
+            img.src = `https://static-cdn.jtvnw.net/emoticons/v2/${emote.id}/default/light/1.0`;
+            img.alt = emote.token;
+            img.setAttribute('aria-label', emote.token);
+    
+            const btn = document.createElement("button");
+            btn.className = "remove-btn";
+    
+            const svgNS = "http://www.w3.org/2000/svg";
+            const svg = document.createElementNS(svgNS, "svg");
+            svg.setAttribute("xmlns", svgNS);
+            svg.setAttribute("width", "16");
+            svg.setAttribute("height", "16");
+            svg.setAttribute("viewBox", "0 0 24 24");
+            svg.setAttribute("fill", "none");
+            svg.setAttribute("stroke", "currentColor");
+            svg.setAttribute("stroke-width", "2");
+            svg.setAttribute("stroke-linecap", "round");
+            svg.setAttribute("stroke-linejoin", "round");
+    
+            const path1 = document.createElementNS(svgNS, "path");
+            path1.setAttribute("d", "M18 6 6 18");
+            const path2 = document.createElementNS(svgNS, "path");
+            path2.setAttribute("d", "m6 6 12 12");
+    
+            svg.appendChild(path1);
+            svg.appendChild(path2);
+    
+            btn.appendChild(svg);
+            btn.addEventListener("click", () => removeEmote(id));
+    
+            chip.appendChild(img);
+            chip.appendChild(btn);
+            emoteWhitelistInput.appendChild(chip);
+        });
+    
+        emoteWhitelistInput.style.minHeight = whitelistedEmotes.size === 0 ? 'calc(28px + 8px)' : '';
+    }
+    
+    function removeEmote(id) {
+        whitelistedEmotes.delete(id);
+        saveSetting("whitelistedEmotes", Object.fromEntries(whitelistedEmotes))
+        renderWhitelistedEmotes();
+    }
+    
+    function removeAllEmotes() {
+        whitelistedEmotes.clear();
+        saveSetting("whitelistedEmotes", {})
+        renderWhitelistedEmotes();
+    }
+
+    renderWhitelistedEmotes();
+
+    setInterval(async() => {
+        whitelistedEmotes = new Map(Object.entries(await getSetting("whitelistedEmotes", {})));
+    }, 3000)
 });
 
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {

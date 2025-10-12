@@ -22,12 +22,10 @@
                 if (emoteItem) {
                     const emoteEdges = emoteItem?.data?.channel?.self?.availableEmoteSetsPaginated?.edges;
                     if (emoteEdges) {
-                        const emotes = emoteEdges
-                            .map(edge => ({
-                                owner: edge.node.owner,
-                                emotes: edge.node.emotes.filter(e => e.type !== "BITS_BADGE_TIERS" && e.type !== "TWO_FACTOR")
-                            }))
-                            .filter(edge => edge.emotes.length);
+                        const emotes = emoteEdges.map(edge => ({
+                            owner: edge.node.owner,
+                            emotes: edge.node.emotes.filter(e => e.type !== "BITS_BADGE_TIERS" && e.type !== "TWO_FACTOR")
+                        })).filter(edge => edge.emotes.length);
 
                         window.dispatchEvent(new CustomEvent("BetterTwitchLurk", {
                             detail: {

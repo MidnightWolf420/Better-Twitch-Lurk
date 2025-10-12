@@ -91,9 +91,64 @@ function getCountdownValue(date) {
     return `Time Until Next Message: ${display}`;
 }
 
-function getRandomEmotes(count = 1) {
+async function emoteWhitelistMenu() {
+    function attachHandlers() {
+        var emoteButtons = document.querySelectorAll(".emote-picker__scroll-container [data-test-selector='emote-button-clickable']");
+        for (var i = 0; i < emoteButtons.length; i++) {
+            (function (button) {
+                if (!button.getAttribute('onclick')) {
+                    button.setAttribute('onclick', `
+                    (function(event){
+                        event.preventDefault();
+                        event.stopImmediatePropagation();
+                        var emoteElement = event.target.closest("[data-test-selector='emote-button-clickable']");
+                        if(emoteElement){
+                            var img = emoteElement.querySelector("img");
+                            if(img){
+                                var name = img.getAttribute("alt");
+                                var id = img.src.match(/\\/emoticons\\/v2\\/([^\\/]+)\\/default/)[1];
+                                Promise.resolve(getValue("whitelistedEmotes", {})).then(function(result){
+                                    var whitelistedEmotes = new Map(Object.entries(result));
+                                    if(!whitelistedEmotes.has(id)){
+                                        whitelistedEmotes.set(id, {id: id, token: name});
+                                        return setValue("whitelistedEmotes", Object.fromEntries(whitelistedEmotes));
+                                    }
+                                });
+                            }
+                        }
+                    })(event)
+                    `);
+                }
+            })(emoteButtons[i]);
+        }
+    }
+
+    const interval = setInterval(() => {
+        const targetElement = document.querySelector(".emote-picker__tab-content");
+        if (!targetElement || targetElement.offsetParent === null) {
+            clearInterval(interval);
+            return;
+        }
+        attachHandlers();
+    }, 500);
+}
+
+
+async function getRandomEmotes(count = 1) {
     if (!emoteList?.length) return [];
-    const allEmotes = emoteList.flatMap(set => set.emotes.map(emote => ({ ...emote, owner: set.owner })));
+
+    const whitelisted = await getSetting("whitelistedEmotes", null);
+    const whitelistIds = whitelisted && Object.keys(whitelisted).length > 0?new Set(Object.keys(whitelisted)):null;
+
+    let allEmotes = emoteList.flatMap(set => set.emotes.map(emote => ({ ...emote, owner: set.owner })).filter(Boolean)
+    );
+
+    if (whitelistIds) {
+        const filtered = allEmotes.filter(emote => whitelistIds.has(emote.id));
+        if (filtered.length > 0) allEmotes = filtered;
+    }
+
+    if (!allEmotes.length) return [];
 
     const weighted = allEmotes.map(emote => {
         let weight = 1;
@@ -216,6 +271,7 @@ async function sleep(ms) {
 }
 
 async function selectEmotes(emotes) {
+    document.querySelectorAll(".emote-picker__scroll-container [data-test-selector='emote-button-clickable']")?.forEach(e => e.removeAttribute("onclick"));
     for (let emote of emotes) {
         clickEmoteSection(emote);
         await sleep(randomInteger(300, 600));
@@ -254,12 +310,12 @@ async function sendEmotes() {
             console.log(`[BetterTwitchLurk] Selecting ${newCount} Emote${newCount>1?"s":""}`);
             if (document.querySelector("[data-a-target='chat-scroller']")) {
                 if (isVisible(document.querySelector("div.emote-picker__tab-content"))) {
-                    await selectEmotes(getRandomEmotes(newCount));
+                    await selectEmotes(await getRandomEmotes(newCount));
                 } else {
                     document.querySelector("[data-a-target='emote-picker-button']").click();
                     await waitForElementVisible("[data-a-target='emote-picker-button']", 5000, false);
                     await sleep(randomInteger(300, 600))
-                    await selectEmotes(getRandomEmotes(newCount));
+                    await selectEmotes(await getRandomEmotes(newCount));
                 }
                 await sendMessage(newCount);
             }
@@ -309,9 +365,19 @@ browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         saveSetting(msg.key, msg.value).then(() => sendResponse({ success: true }));
         return true;
     }
+
     if (msg.action === "get") {
         getSetting(msg.key, msg.defaultValue).then(value => sendResponse({ value }));
         return true;
+    }
+
+    if(msg.action === "open-emote-selector")  {
+        if(!isVisible(document.querySelector("div.emote-picker__tab-content"))) document.querySelector("[data-a-target='emote-picker-button']")?.click();
+        setTimeout(async() => emoteWhitelistMenu(), 500)
+        emoteButton.setAttribute("onclick", `
+            document.querySelectorAll(".emote-picker__scroll-container [data-test-selector='emote-button-clickable']").forEach(e => e.removeAttribute("onclick"));
+            this.removeAttribute('onclick');
+        `);
     }
 });
 
