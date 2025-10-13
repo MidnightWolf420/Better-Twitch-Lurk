@@ -1,7 +1,7 @@
 (() => {
     let currentUser = {};
     let currentChannel;
-
+    
     const originalFetch = window.fetch;
 
     window.fetch = async (...args) => {
