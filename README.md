@@ -10,3 +10,5 @@ https://chromewebstore.google.com/detail/better-twitch-lurk/acgippbkggfncjmpmfoc
 
 ### Firefox
 [Better-Twitch-Lurk Firefox.webm](https://github.com/user-attachments/assets/14add06f-c8c3-4491-b7e2-2c8d07befa41)
+
+https://addons.mozilla.org/en-US/firefox/addon/better-twitch-lurk
