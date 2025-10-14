@@ -93,40 +93,69 @@ function getCountdownValue(date) {
 
 async function emoteWhitelistMenu() {
     function attachHandlers() {
-        var emoteButtons = document.querySelectorAll(".emote-picker__scroll-container [data-test-selector='emote-button-clickable']");
-        for (var i = 0; i < emoteButtons.length; i++) {
-            (function (button) {
-                if (!button.getAttribute('onclick')) {
-                    button.setAttribute('onclick', `
-                    (function(event){
-                        event.preventDefault();
-                        event.stopImmediatePropagation();
-                        var emoteElement = event.target.closest("[data-test-selector='emote-button-clickable']");
-                        if(emoteElement){
-                            var img = emoteElement.querySelector("img");
-                            if(img){
-                                var name = img.getAttribute("alt");
-                                var id = img.src.match(/\\/emoticons\\/v2\\/([^\\/]+)\\/default/)[1];
-                                Promise.resolve(getValue("whitelistedEmotes", {})).then(function(result){
-                                    var whitelistedEmotes = new Map(Object.entries(result));
-                                    if(!whitelistedEmotes.has(id)){
-                                        whitelistedEmotes.set(id, {id: id, token: name});
-                                        return setValue("whitelistedEmotes", Object.fromEntries(whitelistedEmotes));
-                                    }
-                                });
-                            }
+        document.querySelectorAll(".emote-picker__scroll-container [data-test-selector='emote-button-clickable']").forEach(button => {
+            if (!button.getAttribute('onclick')) {
+                button.setAttribute('onclick', `
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    var emoteElement = event.target.closest("[data-test-selector='emote-button-clickable']");
+                    if(emoteElement){
+                        var img = emoteElement.querySelector("img");
+                        if(img){
+                            var name = img.getAttribute("alt");
+                            var id = img.src.match(/\\/emoticons\\/v2\\/([^\\/]+)\\/default/)[1];
+                            Promise.resolve(getValue("whitelistedEmotes", {})).then(function(result){
+                                var whitelistedEmotes = new Map(Object.entries(result));
+                                if(!whitelistedEmotes.has(id)){
+                                    whitelistedEmotes.set(id, {id: id, token: name});
+                                    return setValue("whitelistedEmotes", Object.fromEntries(whitelistedEmotes));
+                                }
+                            });
                         }
-                    })(event)
-                    `);
-                }
-            })(emoteButtons[i]);
-        }
+                    }
+                `);
+            }
+        })
+
+        document.querySelectorAll(".emote-picker__content-block").forEach(section => {
+            try {
+                var header = section.querySelector("strong")?.parentElement;
+                if (!header || header.querySelector(".whitelist-all-emotes")) return;
+        
+                var btn = document.createElement("button");
+                btn.textContent = "Add All";
+                btn.className = "whitelist-all-emotes";
+                btn.style = "display:inline-flex; align-items:center; justify-content:center; padding:6px 12px; font-size:14px; font-weight:600; line-height:1; color:#fff; background-color:#7c4dff; border:1px solid transparent; border-radius:4px; cursor:pointer; transition:0.2s; margin-left:8px;";
+        
+                ["mouseover","focus"].forEach(evt => btn.addEventListener(evt, () => btn.style.backgroundColor="#6441a5"));
+                ["mouseout","blur"].forEach(evt => btn.addEventListener(evt, () => btn.style.backgroundColor="#7c4dff"));
+        
+                btn.setAttribute("onclick", `
+                    var section = this.closest(".emote-picker__content-block");
+                    var emotes = section.querySelectorAll("[data-test-selector='emote-button-clickable']");
+                    Promise.resolve(getValue("whitelistedEmotes", {})).then(result => {
+                        var map = new Map(Object.entries(result));
+                        emotes.forEach(e => {
+                            var img = e.querySelector("img");
+                            if (img) {
+                                var match = img.src.match(/\\/emoticons\\/v2\\/([^\\/]+)\\/default/);
+                                if (match && !map.has(match[1])) map.set(match[1], { id: match[1], token: img.alt });
+                            }
+                        });
+                        setValue("whitelistedEmotes", Object.fromEntries(map));
+                    });
+                `);
+        
+                header.appendChild(btn);
+            } catch (e) {}
+        });             
     }
 
     const interval = setInterval(() => {
         const targetElement = document.querySelector(".emote-picker__tab-content");
         if (!targetElement || targetElement.offsetParent === null) {
             clearInterval(interval);
+
             return;
         }
         attachHandlers();
@@ -377,6 +406,7 @@ browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         alert("Click Emotes In The Emote Selector To Whitelist Them.");
         document.querySelector("[data-test-selector='emote-picker-close'], [data-a-target='emote-picker-button']").setAttribute("onclick", `
             document.querySelectorAll(".emote-picker__scroll-container [data-test-selector='emote-button-clickable']").forEach(e => e.removeAttribute("onclick"));
+            document.querySelectorAll(".whitelist-all-emotes").forEach(button => button.remove());
             this.removeAttribute('onclick');
         `);
     }
@@ -598,9 +628,9 @@ let fetchHook = `(() => {
                     const data = event.data;
                     if (typeof data !== 'string') return;
                     if (this.url.startsWith('wss://irc-ws.chat.twitch.tv/')) {
-                        data.split('\r\n').forEach(line => {
+                        data.split('\\r\\n').forEach(line => {
                             if (!line.startsWith('@') || !line.includes('!') || !line.includes(':')) return;
-                            const match = line.match(/@.*?user-id=(\d+).*?\sPRIVMSG\s#(\w+)\s:(.*)$/);
+                            const match = line.match(/@.*?user-id=(\\d+).*?\\sPRIVMSG\\s#(\\w+)\\s:(.*)$/);
                             if (match) {
                                 const [, userId, channel, message] = match;
                                 if (channel === currentChannel?.login && userId === currentUser?.id) {
