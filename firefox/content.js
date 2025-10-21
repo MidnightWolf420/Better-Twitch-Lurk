@@ -158,10 +158,9 @@ async function getRandomEmotes(count = 1) {
     if (!emoteList?.length) return [];
 
     const whitelisted = await getSetting("whitelistedEmotes", null);
-    const whitelistIds = whitelisted && Object.keys(whitelisted).length > 0?new Set(Object.keys(whitelisted)):null;
+    const whitelistIds = whitelisted && Object.keys(whitelisted).length > 0 ? new Set(Object.keys(whitelisted)) : null;
 
-    let allEmotes = emoteList.flatMap(set => set.emotes.map(emote => ({ ...emote, owner: set.owner })).filter(Boolean)
-    );
+    let allEmotes = emoteList.flatMap(set => set.emotes.map(emote => ({ ...emote, owner: set.owner })).filter(Boolean));
 
     if (whitelistIds) {
         const filtered = allEmotes.filter(emote => whitelistIds.has(emote.id));
@@ -171,11 +170,11 @@ async function getRandomEmotes(count = 1) {
     if (!allEmotes.length) return [];
 
     const weighted = allEmotes.map(emote => {
-        let weight = 1;
-        if (emote.owner?.login === channel?.login) weight = 1500;
-        else if (emote.type === "GLOBALS") weight = 850;
-        else if (emote.type === "HYPE_TRAIN") weight = 600;
-        else if (emote.type === "SUBSCRIPTIONS") weight = 300;
+        let weight = 0.01;
+        if (emote.owner?.login === channel?.login) weight = 0.8;
+        else if (emote.type === "GLOBALS") weight = 0.1;
+        else if (emote.type === "HYPE_TRAIN") weight = 0.06;
+        else if (emote.type === "SUBSCRIPTIONS") weight = 0.03;
         return { emote, weight };
     });
 
