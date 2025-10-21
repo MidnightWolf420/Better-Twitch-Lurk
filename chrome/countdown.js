@@ -60,55 +60,46 @@ async function setValue(key, value, storeName = "settings") {
     });
 }
 
-(async() => {
-    window.addEventListener("load", async() => {
-        const script = document.createElement("script");
-        script.src = "https://cdn.jsdelivr.net/npm/countdown@2.6/countdown.min.js";
-        script.onload = async() => {
-            let nextMessageAt = new Date();
+let nextMessageAt = new Date();
 
-            async function updateCountdown() {
-                const targetEl = document.querySelector('[aria-describedby="Exit-chat-container"]');
-                if (!targetEl) {
-                    setTimeout(updateCountdown, 600);
-                    return;
-                }
+async function updateCountdown() {
+    const targetEl = document.querySelector('[aria-describedby="Exit-chat-container"]');
+    if (!targetEl) {
+        setTimeout(updateCountdown, 600);
+        return;
+    }
 
-                let counterEl = document.getElementById("nextMessage");
-                let showCountdown = await getValue("showCountdown", false);
-                nextMessageAt = (await getValue(window.currentChannel?.login, { nextMessage: new Date() }, "lastMessage"))?.nextMessage;
-                if (showCountdown) {
-                    if (!counterEl) {
-                        counterEl = document.createElement("div");
-                        counterEl.style.cssText = "text-align: center; width: 100%;";
-                        counterEl.id = "nextMessage";
-                        targetEl.insertAdjacentElement("afterend", counterEl);
-                    }
+    let counterEl = document.getElementById("nextMessage");
+    let showCountdown = await getValue("showCountdown", false);
+    nextMessageAt = (await getValue(window.currentChannel?.login, { nextMessage: new Date() }, "lastMessage"))?.nextMessage;
+    if (showCountdown) {
+        if (!counterEl) {
+            counterEl = document.createElement("div");
+            counterEl.style.cssText = "text-align: center; width: 100%;";
+            counterEl.id = "nextMessage";
+            targetEl.insertAdjacentElement("afterend", counterEl);
+        }
 
-                    if (window.countdown) {
-                        const ts = countdown(nextMessageAt, null, countdown.HOURS | countdown.MINUTES | countdown.SECONDS);
-                        counterEl.textContent = "";
-                        const strong = document.createElement("strong");
-                        strong.style.cssText = "font-size: 1.2rem; max-width: 80%; white-space: nowrap; display: inline-block;";
-                        if (ts.value >= 0) {
-                            strong.textContent = "Next Message: 0 Second";
-                        } else {
-                            strong.textContent = "Next Message: " + ts.toString();
-                        }
-
-                        counterEl.appendChild(strong);
-                    }
-                } else if (!showCountdown && counterEl) {
-                    counterEl.remove();
-                    counterEl = null;
-                }
-
-                setTimeout(updateCountdown, 600);
+        if (window.countdown) {
+            const ts = countdown(nextMessageAt, null, countdown.HOURS | countdown.MINUTES | countdown.SECONDS);
+            counterEl.textContent = "";
+            const strong = document.createElement("strong");
+            strong.style.cssText = "font-size: 1.2rem; max-width: 80%; white-space: nowrap; display: inline-block;";
+            if (ts.value >= 0) {
+                strong.textContent = "Next Message: 0 Second";
+            } else {
+                strong.textContent = "Next Message: " + ts.toString();
             }
 
-
-            updateCountdown();
+            counterEl.appendChild(strong);
         }
-        document.head.appendChild(script);
-    })
-})();
+    } else if (!showCountdown && counterEl) {
+        counterEl.remove();
+        counterEl = null;
+    }
+
+    setTimeout(updateCountdown, 600);
+}
+
+
+updateCountdown();

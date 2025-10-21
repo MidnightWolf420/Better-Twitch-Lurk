@@ -4,8 +4,11 @@ let isSending = false;
 let lastEnabledState;
 let emoteList = [];
 let oldStreamInfo;
-let streamInfo;
+let adsFinishedAt;
+let isAdPlaying;
+let currentUser;
 let isFollowing;
+let streamInfo;
 let oldChannel;
 let channel;
 
@@ -71,34 +74,22 @@ async function getSetting(key, defaultValue = null, storeName = "settings") {
     }
 }
 
-function getCountdownValue(date) {
-    const remaining = date - Date.now();
-    let display = "";
+function setChatInputValue(text = "") {
+    window.postMessage({ type: "setChatInputValue", text }, "*");
+}
 
-    if (remaining > 0) {
-        const totalSeconds = Math.floor(remaining / 1000);
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-
-        if (hours > 0) display += `${hours} Hour${hours > 1 ? "s" : ""} `;
-        if (minutes > 0) display += `${minutes} Minute${minutes > 1 ? "s" : ""} `;
-        display += `${seconds} Second${seconds !== 1 ? "s" : ""}`;
-    } else {
-        display = "0 Second";
-    }
-
-    return `Time Until Next Message: ${display}`;
+function isDate(value) {
+    return value instanceof Date && !isNaN(value.getTime());
 }
 
 async function emoteWhitelistMenu() {
     function attachHandlers() {
-        document.querySelectorAll(".emote-picker__scroll-container [data-test-selector='emote-button-clickable']").forEach(button => {
-            if (!button.getAttribute('onclick')) {
-                button.setAttribute('onclick', `
+        document.querySelectorAll(".emote-picker__scroll-container [data-test-selector=\"emote-button-clickable\"]").forEach(button => {
+            if (!button.getAttribute("onclick")) {
+                button.setAttribute("onclick", `
                     event.preventDefault();
                     event.stopImmediatePropagation();
-                    var emoteElement = event.target.closest("[data-test-selector='emote-button-clickable']");
+                    var emoteElement = event.target.closest("[data-test-selector="emote-button-clickable"]");
                     if(emoteElement){
                         var img = emoteElement.querySelector("img");
                         if(img){
@@ -132,7 +123,7 @@ async function emoteWhitelistMenu() {
         
                 btn.setAttribute("onclick", `
                     var section = this.closest(".emote-picker__content-block");
-                    var emotes = section.querySelectorAll("[data-test-selector='emote-button-clickable']");
+                    var emotes = section.querySelectorAll("[data-test-selector=\"emote-button-clickable\"]");
                     Promise.resolve(getValue("whitelistedEmotes", {})).then(result => {
                         var map = new Map(Object.entries(result));
                         emotes.forEach(e => {
@@ -300,7 +291,8 @@ async function sleep(ms) {
 }
 
 async function selectEmotes(emotes) {
-    document.querySelectorAll(".emote-picker__scroll-container [data-test-selector='emote-button-clickable']")?.forEach(e => e.removeAttribute("onclick"));
+    document.querySelectorAll(".emote-picker__scroll-container [data-test-selector=\"emote-button-clickable\"]")?.forEach(e => e.removeAttribute("onclick"));
+    setChatInputValue("")
     for (let emote of emotes) {
         clickEmoteSection(emote);
         await sleep(randomInteger(300, 600));
@@ -316,11 +308,11 @@ async function selectEmotes(emotes) {
 
 async function sendMessage(emoteCount) {
     let delay = Math.round(randomFloat(13, 15) * 60 * 1000);
-    await waitForElementsVisible("[data-a-target='chat-input'] [data-a-target='emote-name']", emoteCount, 5000, false);
-    document.querySelector("[data-a-target='chat-send-button']")?.click();
+    await waitForElementsVisible("[data-a-target=\"chat-input\"] [data-a-target=\"emote-name\"]", emoteCount, 5000, false);
+    document.querySelector("[data-a-target=\"chat-send-button\"]")?.click();
     try {
-        await waitForElementVisible("[data-test-selector='chat-rules-ok-button']", 3000, true);
-        document.querySelector("[data-test-selector='chat-rules-ok-button']")?.click()
+        await waitForElementVisible("[data-test-selector=\"chat-rules-ok-button\"]", 3000, true);
+        document.querySelector("[data-test-selector=\"chat-rules-ok-button\"]")?.click()
         await sleep(randomInteger(300, 600))
     } catch {}
     let nextMessageAt = new Date(Date.now() + delay);
@@ -337,15 +329,18 @@ async function sendEmotes() {
                 newCount = randomInteger(emoteCount.min, emoteCount.max);
             }
             console.log(`[BetterTwitchLurk] Selecting ${newCount} Emote${newCount>1?"s":""}`);
-            if (document.querySelector("[data-a-target='chat-scroller']")) {
+            if (document.querySelector("[data-a-target=\"chat-scroller\"]")) {
                 if (isVisible(document.querySelector("div.emote-picker__tab-content"))) {
                     await selectEmotes(await getRandomEmotes(newCount));
                 } else {
-                    document.querySelector("[data-a-target='emote-picker-button']").click();
-                    await waitForElementVisible("[data-a-target='emote-picker-button']", 5000, false);
+                    document.querySelector("[data-a-target=\"emote-picker-button\"]").click();
+                    await waitForElementVisible("[data-a-target=\"emote-picker-button\"]", 5000, false);
                     await sleep(randomInteger(300, 600))
                     await selectEmotes(await getRandomEmotes(newCount));
                 }
+                const delay = Math.round(randomFloat(13, 15) * 60 * 1000);
+                let nextMessageAt =  new Date(Date.now() + delay);
+                await saveSetting(channel?.login, { lastMessage: new Date(), nextMessage: nextMessageAt }, "lastMessage");
                 await sendMessage(newCount);
             }
         }
@@ -359,7 +354,12 @@ window.addEventListener("BetterTwitchLurk", async(event) => {
     } else if(event.detail.type === "ChannelName") {
         oldChannel = channel;
         channel = event.detail.data;
-        if(channel?.login !== oldChannel?.login) console.log("[BetterTwitchLurk] Updated Channel Name:", channel?.login);
+        if(channel?.login !== oldChannel?.login) {
+            console.log("[BetterTwitchLurk] Updated Channel Name:", channel?.login);
+            isFollowing = false;
+        }
+    } else if(event.detail.type === "CurrentUser") {
+        currentUser = event.detail.data;
     } else if(event.detail.type === "ChannelLive") {
         const newStreamInfo = event.detail.data;
         if (!streamInfo || streamInfo.isLive !== newStreamInfo.isLive || streamInfo.user?.login !== newStreamInfo.user?.login) {
@@ -386,6 +386,17 @@ window.addEventListener("BetterTwitchLurk", async(event) => {
         } else {
             console.log(`[BetterTwitchLurk] You ${isFollowing?"Are":"Are Not"} Following ${event?.detail?.data?.user?.displayName||event?.detail?.data?.user?.login}`);
         }
+    } else if(event.detail.type === "AdPlaying") {
+        let oldAdPlayingState = isAdPlaying;
+        isAdPlaying = event?.detail?.data?.isAdPlaying;
+        if(isAdPlaying) {
+            if(oldAdPlayingState != isAdPlaying) {
+                console.log("[BetterTwitchLurk] Ads Just Started Playing");
+            }
+        } else {
+            adsFinishedAt = new Date()
+            console.log("[BetterTwitchLurk] The Ads Finished Playing");
+        }
     }
 });
 
@@ -401,13 +412,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }
 
     if(msg.action === "open-emote-selector")  {
-        if(!isVisible(document.querySelector("div.emote-picker__tab-content"))) document.querySelector("[data-a-target='emote-picker-button']")?.click();
+        if(!isVisible(document.querySelector("div.emote-picker__tab-content"))) document.querySelector("[data-a-target=\"emote-picker-button\"]")?.click();
         setTimeout(async() => emoteWhitelistMenu(), 500)
         alert("Click Emotes In The Emote Selector To Whitelist Them.");
-        document.querySelector("[data-test-selector='emote-picker-close'], [data-a-target='emote-picker-button']").setAttribute("onclick", `
-            document.querySelectorAll(".emote-picker__scroll-container [data-test-selector='emote-button-clickable']").forEach(e => e.removeAttribute("onclick"));
+        document.querySelector("[data-test-selector=\"emote-picker-close\"], [data-a-target=\"emote-picker-button\"]").setAttribute("onclick", `
+            document.querySelectorAll(".emote-picker__scroll-container [data-test-selector=\"emote-button-clickable\"]").forEach(e => e.removeAttribute("onclick"));
             document.querySelectorAll(".whitelist-all-emotes").forEach(button => button.remove());
-            this.removeAttribute('onclick');
+            this.removeAttribute("onclick");
         `);
     }
 });
@@ -420,23 +431,16 @@ async function runAutoSendLoop() {
     isSending = true;
     try {
         const autoEnabled = await getSetting("autoEmoteEnabled", false);
-        if (!autoEnabled || !channel?.login || !streamInfo?.isLive || (await getSetting("followedOnly", false) && !isFollowing)) {
-            return;
-        }
-
+        if(!autoEnabled || !channel?.login || !streamInfo?.isLive || (await getSetting("followedOnly", false) && !isFollowing) || currentUser.login === channel.login) return;
+        if((adsFinishedAt && isDate(adsFinishedAt) && !isAdPlaying && (Date.now() - adsFinishedAt.getTime() < 25000)) || isAdPlaying) return;
         const data = await getSetting(channel?.login, null, "lastMessage");
         const now = Date.now();
         const nextMsgTime = data?.nextMessage ? new Date(data.nextMessage).getTime() : now;
 
         if (!data || now >= nextMsgTime) {
-            const delay = Math.round(randomFloat(13, 15) * 60 * 1000);
-            let nextMessageAt =  new Date(now + delay);
-            await saveSetting(channel?.login, { lastMessage: new Date(), nextMessage: nextMessageAt }, "lastMessage");
             await sendEmotes();
         }
-    } catch (err) {
-        console.error("[BetterTwitchLurk] runAutoSendLoop error:", err);
-    } finally {
+    } catch {} finally {
         isSending = false;
         setTimeout(runAutoSendLoop, 1000);
     }
@@ -444,244 +448,12 @@ async function runAutoSendLoop() {
 
 runAutoSendLoop();
 
-function injectScripts(scriptFiles) {
-    for (var i = 0; i < scriptFiles.length; i++) {
-        var item = scriptFiles[i];
-        if (!item) { continue; }
-
-        if (item.inline) {
-            var scriptInline = document.createElement("script");
-            scriptInline.textContent = item.code;
-            (document.head || document.documentElement).appendChild(scriptInline);
-            scriptInline.parentNode && scriptInline.parentNode.removeChild(scriptInline);
-        } else if (item.file) {
-            var scriptSrc = document.createElement("script");
-            scriptSrc.src = chrome.runtime.getURL(item.file);
-            (document.head || document.documentElement).appendChild(scriptSrc);
-        }
+async function injectScripts(scriptFiles) {
+    for (const file of scriptFiles) {
+        const script = document.createElement("script");
+        script.src = chrome.runtime.getURL(file);
+        (document.head || document.documentElement).appendChild(script);
     }
 }
 
-let fetchHook = `(() => {
-    let currentUser = {};
-    let currentChannel;
-    
-    const originalFetch = window.fetch;
-
-    window.fetch = async (...args) => {
-        const response = await originalFetch(...args);
-        try {
-            if (args[0]?.includes("gql.twitch.tv/gql")) {
-                const data = await response.clone().json();
-                const items = Array.isArray(data) ? data : [data];
-
-                const currentUserItem = items.find(item => item?.data?.currentUser);
-                if (currentUserItem) {
-                    const user = currentUserItem.data.currentUser;
-                    if (user?.id) currentUser.id = user.id;
-                    if (user?.login) currentUser.login = user.login;
-                }
-
-                const emoteItem = items.find(item => item?.extensions?.operationName === "AvailableEmotesForChannelPaginated");
-                if (emoteItem) {
-                    const emoteEdges = emoteItem?.data?.channel?.self?.availableEmoteSetsPaginated?.edges;
-                    if (emoteEdges) {
-                        const emotes = emoteEdges.map(edge => ({
-                            owner: edge.node.owner,
-                            emotes: edge.node.emotes.filter(e => e.type !== "BITS_BADGE_TIERS" && e.type !== "TWO_FACTOR")
-                        })).filter(edge => edge.emotes.length);
-
-                        window.dispatchEvent(new CustomEvent("BetterTwitchLurk", {
-                            detail: {
-                                type: "EmotesUpdated",
-                                data: {
-                                    emoteList: emotes
-                                }
-                            }
-                        }));
-                    }
-                }
-
-                const useLiveItem = items.find(item => item?.extensions?.operationName === "UseLive");
-                if (useLiveItem) {
-                    const user = useLiveItem?.data?.user;
-                    if (user) {
-                        const stream = user.stream;
-                        const userItem = { id: user.id, login: user.login };
-                        currentChannel = userItem;
-                        window.currentChannel = currentChannel;
-
-                        window.dispatchEvent(new CustomEvent("BetterTwitchLurk", {
-                            detail: {
-                                type: "ChannelName",
-                                data: userItem
-                            }
-                        }));
-
-                        window.dispatchEvent(new CustomEvent("BetterTwitchLurk", {
-                            detail: {
-                                type: "ChannelLive",
-                                data: {
-                                    user: userItem,
-                                    isLive: !!stream,
-                                    streamId: stream?.id,
-                                    startedAt: stream?.createdAt
-                                }
-                            }
-                        }));
-                    }
-                }
-
-                const messageItem = items.find(item => item?.extensions?.operationName === "sendChatMessage");
-                if (messageItem) {
-                    console.log("[BetterTwitchLurk] Message Sent Post Request");
-                    window.dispatchEvent(new CustomEvent("BetterTwitchLurk", {
-                        detail: {
-                            type: "MessageSent",
-                            data: {
-                                sentAt: Date.now()
-                            }
-                        }
-                    }));
-                }
-
-                const followItem = items.find(item => item?.extensions?.operationName === "FollowButton_User" || item?.extensions?.operationName === "FollowButton_FollowUser" || item?.extensions?.operationName === "FollowButton_UnfollowUser");
-                if (followItem) {
-                    if(followItem?.extensions?.operationName === "FollowButton_User") {
-                        let channel = {
-                            id: followItem.data?.user?.id,
-                            displayName: followItem.data?.user?.displayName,
-                            login: followItem.data?.user?.login
-                        }
-
-                        if(channel.id === currentChannel.id) {
-                            let isFollowing = followItem.data?.user?.self?.follower && followItem.data?.user?.self?.follower?.followedAt;
-                            window.dispatchEvent(new CustomEvent("BetterTwitchLurk", {
-                                detail: {
-                                    type: "FollowingChannel",
-                                    data: {
-                                        eventName: "IsFollowing",
-                                        user: channel,
-                                        follower: followItem.data?.user?.self?.follower,
-                                        isFollowing
-                                    }
-                                }
-                            }));
-                        }
-                    } else if(followItem?.extensions?.operationName === "FollowButton_FollowUser") {
-                        let channel = {
-                            id: followItem.data?.followUser?.follow?.user?.id,
-                            displayName: followItem.data?.followUser?.follow?.user?.displayName,
-                            login: followItem.data?.followUser?.follow?.user?.login
-                        }
-
-                        if(channel.id === currentChannel.id) {
-                            let isFollowing = followItem.data?.followUser?.follow?.user?.self?.follower && followItem.data?.followUser?.follow?.user?.self?.follower?.followedAt;
-                            window.dispatchEvent(new CustomEvent("BetterTwitchLurk", {
-                                detail: {
-                                    type: "FollowingChannel",
-                                    data: {
-                                        eventName: "FollowUser",
-                                        user: channel,
-                                        follower: followItem.data?.followUser?.follow?.user?.self?.follower,
-                                        isFollowing
-                                    }
-                                }
-                            }));
-                        }
-                    } else if(followItem?.extensions?.operationName === "FollowButton_UnfollowUser") {
-                        let channel = {
-                            id: followItem.data?.unfollowUser?.follow?.user?.id,
-                            displayName: followItem.data?.unfollowUser?.follow?.user?.displayName,
-                            login: followItem.data?.unfollowUser?.follow?.user?.login
-                        }
-
-                        if(channel.id === currentChannel.id) {
-                            let isFollowing = false;
-                            window.dispatchEvent(new CustomEvent("BetterTwitchLurk", {
-                                detail: {
-                                    type: "FollowingChannel",
-                                    data: {
-                                        eventName: "UnfollowUser",
-                                        user: channel,
-                                        follower: null,
-                                        isFollowing
-                                    }
-                                }
-                            }));
-                        }
-                    }
-                }
-            }
-        } catch { }
-        return response;
-    };
-
-    const OriginalWebSocket = window.WebSocket;
-
-    class HookedWebSocket extends OriginalWebSocket {
-        constructor(url, protocols) {
-            super(url, protocols);
-
-            this.addEventListener('message', (event) => {
-                try {
-                    const data = event.data;
-                    if (typeof data !== 'string') return;
-                    if (this.url.startsWith('wss://irc-ws.chat.twitch.tv/')) {
-                        data.split('\\r\\n').forEach(line => {
-                            if (!line.startsWith('@') || !line.includes('!') || !line.includes(':')) return;
-                            const match = line.match(/@.*?user-id=(\\d+).*?\\sPRIVMSG\\s#(\\w+)\\s:(.*)$/);
-                            if (match) {
-                                const [, userId, channel, message] = match;
-                                if (channel === currentChannel?.login && userId === currentUser?.id) {
-                                    console.log("[BetterTwitchLurk] Message Sent Websocket")
-                                    window.dispatchEvent(new CustomEvent("BetterTwitchLurk", {
-                                        detail: {
-                                            type: "MessageSent",
-                                            data: {
-                                                sentAt: Date.now()
-                                            }
-                                        }
-                                    }));
-                                }
-                            }
-                        });
-
-                    } else if (this.url.startsWith('wss://hermes.twitch.tv/v1')) {
-                        let parsed;
-                        try {
-                            parsed = JSON.parse(data);
-                        } catch { return; }
-
-                        if (parsed?.notification?.pubsub) {
-                            let pubsub;
-                            try {
-                                pubsub = JSON.parse(parsed.notification.pubsub);
-                            } catch { return; }
-
-                            if (pubsub?.type === "raid_go_v2" && pubsub?.raid?.id) {
-                                window.dispatchEvent(new CustomEvent("BetterTwitchLurk", {
-                                    detail: {
-                                        type: "RaidingOut",
-                                        data: {
-                                            raidId: pubsub.raid.id,
-                                            creatorId: pubsub.raid.creator_id,
-                                            targetId: pubsub.raid.target_id,
-                                            targetLogin: pubsub.raid.target_login,
-                                            viewerCount: pubsub.raid.viewer_count,
-                                            receivedAt: Date.now()
-                                        }
-                                    }
-                                }));
-                            }
-                        }
-                    }
-                } catch { }
-            });
-        }
-    }
-
-    window.WebSocket = HookedWebSocket;
-})();`
-
-injectScripts([{ code: fetchHook, inline: true }, { file: "countdown.js", inline: false }]);
+injectScripts(["fetchHook.js", "scripts/countdown.min.js", "countdown.js", "chat.js"]);

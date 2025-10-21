@@ -1,13 +1,21 @@
 (() => {
     let currentUser = {};
     let currentChannel;
+    let isAdPlaying;
+    let adStartTime;
+
+    function isDate(value) {
+        return value instanceof Date && !isNaN(value.getTime());
+    }
 
     const originalFetch = window.fetch;
 
     window.fetch = async (...args) => {
+        const [url, options] = args;
+        const requestBody = options?.body;
         const response = await originalFetch(...args);
         try {
-            if (args[0]?.includes("gql.twitch.tv/gql")) {
+            if (url?.includes("gql.twitch.tv/gql")) {
                 const data = await response.clone().json();
                 const items = Array.isArray(data) ? data : [data];
 
@@ -16,6 +24,12 @@
                     const user = currentUserItem.data.currentUser;
                     if (user?.id) currentUser.id = user.id;
                     if (user?.login) currentUser.login = user.login;
+                    window.dispatchEvent(new CustomEvent("BetterTwitchLurk", {
+                        detail: {
+                            type: "CurrentUser",
+                            data: currentUser
+                        }
+                    }));
                 }
 
                 const emoteItem = items.find(item => item?.extensions?.operationName === "AvailableEmotesForChannelPaginated");
@@ -24,7 +38,7 @@
                     if (emoteEdges) {
                         const emotes = emoteEdges.map(edge => ({
                             owner: edge.node.owner,
-                            emotes: edge.node.emotes.filter(e => e.type !== "BITS_BADGE_TIERS" && e.type !== "TWO_FACTOR")
+                            emotes: edge.node.emotes.filter(e => e.type !== "BITS_BADGE_TIERS")
                         })).filter(edge => edge.emotes.length);
 
                         window.dispatchEvent(new CustomEvent("BetterTwitchLurk", {
@@ -79,6 +93,35 @@
                             }
                         }
                     }));
+                }
+
+                const adItem = items.find(item => item?.extensions?.operationName === "ClientSideAdEventHandling_RecordAdEvent");
+                if (adItem) {
+                    try {
+                        let adRequestItem = JSON.parse(requestBody).find(item => item?.operationName === "ClientSideAdEventHandling_RecordAdEvent");
+                        if(adRequestItem) {
+                            let eventName = adRequestItem.variables.input.eventName;
+                            let adPayload = JSON.parse(adRequestItem.variables.input.eventPayload);
+                            isAdPlaying = eventName != "video_ad_pod_complete";
+                            if(isAdPlaying) {
+                                if(!adStartTime || !isDate(adStartTime)) adStartTime = new Date()
+                            } else adStartTime = null;
+
+                            window.dispatchEvent(new CustomEvent("BetterTwitchLurk", {
+                                detail: {
+                                    type: "AdPlaying",
+                                    data: {
+                                        eventName: eventName,
+                                        rollType: adPayload.roll_type,
+                                        adPostition: adPayload.ad_position,
+                                        duration: adPayload.duration,
+                                        isAdPlaying: isAdPlaying,
+                                        ...(adStartTime != null && { startedAt: adStartTime })
+                                    }
+                                }
+                            }));
+                        }
+                    } catch {}
                 }
 
                 const followItem = items.find(item => item?.extensions?.operationName === "FollowButton_User" || item?.extensions?.operationName === "FollowButton_FollowUser" || item?.extensions?.operationName === "FollowButton_UnfollowUser");
