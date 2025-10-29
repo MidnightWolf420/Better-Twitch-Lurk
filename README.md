@@ -4,11 +4,17 @@ Posts a random Twitch emote every 13-15 minutes to stay counted as a viewer.
 
 ## How To Install
 ### Chrome
-[Better-Twitch-Lurk Chrome.webm](https://github.com/user-attachments/assets/eb1d137a-8bca-4f42-bb2a-bc766aa3908c)
+
+[Better-Twitch-Lurk Chrome.webm](https://github.com/user-attachments/assets/af8810c9-2efe-4dd7-9bde-e302894eaaac)
+
 
 https://chromewebstore.google.com/detail/better-twitch-lurk/acgippbkggfncjmpmfocjogkeecfahal
 
 ### Firefox
-[Better-Twitch-Lurk Firefox.webm](https://github.com/user-attachments/assets/14add06f-c8c3-4491-b7e2-2c8d07befa41)
+
+Enable Unsigned Extensions **about:config**
+then set **xpinstall.signatures.required** to **false**
+
+[Better-Twitch-Lurk Firefox.webm](https://github.com/user-attachments/assets/1d9b1658-f285-4995-9928-d493689457e6)
 
 https://addons.mozilla.org/en-US/firefox/addon/better-twitch-lurk
