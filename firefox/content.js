@@ -1,5 +1,6 @@
 let indexedDBStores = ["settings", "lastMessage"];
 let dbName = "BetterTwitchLurkDB";
+let timerAfterAds = 10000;
 let isSending = false;
 let lastEnabledState;
 let emoteList = [];
@@ -172,9 +173,9 @@ async function getRandomEmotes(count = 1) {
     const weighted = allEmotes.map(emote => {
         let weight = 0.01;
         if (emote.owner?.login === channel?.login) weight = 0.8;
-        else if (emote.type === "GLOBALS") weight = 0.1;
-        else if (emote.type === "HYPE_TRAIN") weight = 0.06;
-        else if (emote.type === "SUBSCRIPTIONS") weight = 0.03;
+        else if (emote.type === "SUBSCRIPTIONS") weight = 0.1;
+        else if (emote.type === "GLOBALS") weight = 0.6;
+        else if (emote.type === "HYPE_TRAIN") weight = 0.03;
         return { emote, weight };
     });
 
@@ -306,6 +307,7 @@ async function selectEmotes(emotes) {
 }
 
 async function sendMessage(emoteCount) {
+    if((adsFinishedAt && isDate(adsFinishedAt) && !isAdPlaying && (Date.now() - adsFinishedAt.getTime() < 25000)) || isAdPlaying) return;
     let delay = Math.round(randomFloat(13, 15) * 60 * 1000);
     await waitForElementsVisible("[data-a-target=\"chat-input\"] [data-a-target=\"emote-name\"]", emoteCount, 5000, false);
     document.querySelector("[data-a-target=\"chat-send-button\"]")?.click();
@@ -321,6 +323,7 @@ async function sendMessage(emoteCount) {
 
 async function sendEmotes() {
     if (await getSetting("autoEmoteEnabled", false)) {
+        if((adsFinishedAt && isDate(adsFinishedAt) && !isAdPlaying && (Date.now() - adsFinishedAt.getTime() < 25000)) || isAdPlaying) return;
         if(emoteList && emoteList.length > 0) {
             let emoteCount = (await getSetting("useRange", false))?{ min: await getSetting("emoteMin", 1), max: await getSetting("emoteMax", 3) }:await getSetting("emoteCount", 1);
             let newCount = emoteCount;
@@ -431,7 +434,7 @@ async function runAutoSendLoop() {
     try {
         const autoEnabled = await getSetting("autoEmoteEnabled", false);
         if(!autoEnabled || !channel?.login || !streamInfo?.isLive || (await getSetting("followedOnly", false) && !isFollowing) || currentUser.login === channel.login) return;
-        if((adsFinishedAt && isDate(adsFinishedAt) && !isAdPlaying && (Date.now() - adsFinishedAt.getTime() < 25000)) || isAdPlaying) return;
+        if((adsFinishedAt && isDate(adsFinishedAt) && !isAdPlaying && (Date.now() - adsFinishedAt.getTime() < timerAfterAds)) || isAdPlaying) return;
         const data = await getSetting(channel?.login, null, "lastMessage");
         const now = Date.now();
         const nextMsgTime = data?.nextMessage ? new Date(data.nextMessage).getTime() : now;
