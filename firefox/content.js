@@ -174,7 +174,7 @@ async function getRandomEmotes(count = 1) {
         let weight = 0.01;
         if (emote.owner?.login === channel?.login) weight = 0.8;
         else if (emote.type === "SUBSCRIPTIONS") weight = 0.1;
-        else if (emote.type === "GLOBALS") weight = 0.6;
+        else if (emote.type === "GLOBALS") weight = 0.06;
         else if (emote.type === "HYPE_TRAIN") weight = 0.03;
         return { emote, weight };
     });
