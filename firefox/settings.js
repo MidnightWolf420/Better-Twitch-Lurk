@@ -50,6 +50,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const emoteCountInput = document.querySelector("#emote-count");
     const emoteMinInput = document.querySelector("#emote-min");
     const emoteMaxInput = document.querySelector("#emote-max");
+    const customMessageInput = document.querySelector("#custom-message");
     const emoteWhitelistInput = document.querySelector("#emote-whitelist");
     const addEmotesBtn = document.querySelector("#add-emotes");
     const removeWhitelistedEmotesBtn = document.querySelector("#remove-all-emotes");
@@ -80,6 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     emoteCountInput.value = await getSetting("emoteCount", 1);
     emoteMinInput.value = await getSetting("emoteMin", 1);
     emoteMaxInput.value = await getSetting("emoteMax", 3);
+    customMessageInput.value = await getSetting("customMessage", "");
 
     autoEmoteBtn.addEventListener("click", async () => {
         const newState = autoEmoteBtn.getAttribute("aria-pressed") !== "true";
@@ -135,11 +137,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         await saveSetting("emoteMax", parseInt(emoteMaxInput.value) || 3);
     });
 
+    customMessageInput.addEventListener("change", async () => {
+        await saveSetting("customMessage", customMessageInput.value || "");
+    });
+
     removeWhitelistedEmotesBtn.addEventListener("click", async () => {
         removeAllEmotes();
     });
 
-    addEmotesBtn.addEventListener("click", async (event) => {
+    addEmotesBtn.addEventListener("click", async () => {
         const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
         if (!tab) return;
         await browser.tabs.sendMessage(tab.id, { action: "open-emote-selector" });

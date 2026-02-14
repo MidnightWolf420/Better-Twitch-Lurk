@@ -279,6 +279,14 @@ body {
     color: #f2f2f2;
 }
 
+.setting-row > input[type="text"] {
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    border: 1px solid #6b7381;
+    background: #2b2b2b;
+    color: #f2f2f2;
+}
+
 .emote-card {
     max-width: 31.25rem;
     width: 100%;

@@ -293,6 +293,12 @@ async function sleep(ms) {
 async function selectEmotes(emotes) {
     document.querySelectorAll(".emote-picker__scroll-container [data-test-selector='emote-button-clickable']")?.forEach(e => e.removeAttribute("onclick"));
     setChatInputValue("")
+    setTimeout(async () => {
+        let customMessage = await getSetting("customMessage", "");
+        console.log(customMessage)
+        if(customMessage && customMessage.length > 0) setChatInputValue(`${customMessage} `)
+    }, randomInteger(300, 600))
+
     for (let emote of emotes) {
         clickEmoteSection(emote);
         await sleep(randomInteger(300, 600));
