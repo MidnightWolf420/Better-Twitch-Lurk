@@ -85,12 +85,12 @@ function isDate(value) {
 
 async function emoteWhitelistMenu() {
     function attachHandlers() {
-        document.querySelectorAll(".emote-picker__scroll-container [data-test-selector=\"emote-button-clickable\"]").forEach(button => {
+        document.querySelectorAll(".emote-picker__scroll-container [data-test-selector='emote-button-clickable']").forEach(button => {
             if (!button.getAttribute("onclick")) {
                 button.setAttribute("onclick", `
                     event.preventDefault();
                     event.stopImmediatePropagation();
-                    var emoteElement = event.target.closest("[data-test-selector="emote-button-clickable"]");
+                    var emoteElement = event.target.closest("[data-test-selector='emote-button-clickable']");
                     if(emoteElement){
                         var img = emoteElement.querySelector("img");
                         if(img){
@@ -124,7 +124,7 @@ async function emoteWhitelistMenu() {
         
                 btn.setAttribute("onclick", `
                     var section = this.closest(".emote-picker__content-block");
-                    var emotes = section.querySelectorAll("[data-test-selector=\"emote-button-clickable\"]");
+                    var emotes = section.querySelectorAll("[data-test-selector='emote-button-clickable']");
                     Promise.resolve(getValue("whitelistedEmotes", {})).then(result => {
                         var map = new Map(Object.entries(result));
                         emotes.forEach(e => {
@@ -291,7 +291,7 @@ async function sleep(ms) {
 }
 
 async function selectEmotes(emotes) {
-    document.querySelectorAll(".emote-picker__scroll-container [data-test-selector=\"emote-button-clickable\"]")?.forEach(e => e.removeAttribute("onclick"));
+    document.querySelectorAll(".emote-picker__scroll-container [data-test-selector='emote-button-clickable']")?.forEach(e => e.removeAttribute("onclick"));
     setChatInputValue("")
     for (let emote of emotes) {
         clickEmoteSection(emote);
@@ -309,11 +309,11 @@ async function selectEmotes(emotes) {
 async function sendMessage(emoteCount) {
     if((adsFinishedAt && isDate(adsFinishedAt) && !isAdPlaying && (Date.now() - adsFinishedAt.getTime() < 25000)) || isAdPlaying) return;
     let delay = Math.round(randomFloat(13, 15) * 60 * 1000);
-    await waitForElementsVisible("[data-a-target=\"chat-input\"] [data-a-target=\"emote-name\"]", emoteCount, 5000, false);
-    document.querySelector("[data-a-target=\"chat-send-button\"]")?.click();
+    await waitForElementsVisible("[data-a-target='chat-input'] [data-a-target='emote-name']", emoteCount, 5000, false);
+    document.querySelector("[data-a-target='chat-send-button']")?.click();
     try {
-        await waitForElementVisible("[data-test-selector=\"chat-rules-ok-button\"]", 3000, true);
-        document.querySelector("[data-test-selector=\"chat-rules-ok-button\"]")?.click()
+        await waitForElementVisible("[data-test-selector='chat-rules-ok-button']", 3000, true);
+        document.querySelector("[data-test-selector='chat-rules-ok-button']")?.click()
         await sleep(randomInteger(300, 600))
     } catch {}
     let nextMessageAt = new Date(Date.now() + delay);
@@ -331,12 +331,12 @@ async function sendEmotes() {
                 newCount = randomInteger(emoteCount.min, emoteCount.max);
             }
             console.log(`[BetterTwitchLurk] Selecting ${newCount} Emote${newCount>1?"s":""}`);
-            if (document.querySelector("[data-a-target=\"chat-scroller\"]")) {
+            if (document.querySelector("[data-a-target='chat-scroller']")) {
                 if (isVisible(document.querySelector("div.emote-picker__tab-content"))) {
                     await selectEmotes(await getRandomEmotes(newCount));
                 } else {
-                    document.querySelector("[data-a-target=\"emote-picker-button\"]").click();
-                    await waitForElementVisible("[data-a-target=\"emote-picker-button\"]", 5000, false);
+                    document.querySelector("[data-a-target='emote-picker-button']").click();
+                    await waitForElementVisible("[data-a-target='emote-picker-button']", 5000, false);
                     await sleep(randomInteger(300, 600))
                     await selectEmotes(await getRandomEmotes(newCount));
                 }
@@ -414,14 +414,16 @@ browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }
 
     if(msg.action === "open-emote-selector")  {
-        if(!isVisible(document.querySelector("div.emote-picker__tab-content"))) document.querySelector("[data-a-target=\"emote-picker-button\"]")?.click();
+        if(!isVisible(document.querySelector("div.emote-picker__tab-content"))) document.querySelector("[data-a-target='emote-picker-button']")?.click();
         setTimeout(async() => emoteWhitelistMenu(), 500)
         alert("Click Emotes In The Emote Selector To Whitelist Them.");
-        document.querySelector("[data-test-selector=\"emote-picker-close\"], [data-a-target=\"emote-picker-button\"]").setAttribute("onclick", `
-            document.querySelectorAll(".emote-picker__scroll-container [data-test-selector=\"emote-button-clickable\"]").forEach(e => e.removeAttribute("onclick"));
-            document.querySelectorAll(".whitelist-all-emotes").forEach(button => button.remove());
-            this.removeAttribute("onclick");
-        `);
+        document.querySelectorAll("[data-test-selector='emote-picker-close'], [data-a-target='emote-picker-button']").forEach(el => {
+            el.setAttribute("onclick", `
+                document.querySelectorAll(".emote-picker__scroll-container [data-test-selector='emote-button-clickable']").forEach(e => e.removeAttribute("onclick"));
+                document.querySelectorAll(".whitelist-all-emotes").forEach(button => button.remove());
+                document.querySelectorAll("[data-test-selector='emote-picker-close'], [data-a-target='emote-picker-button']").forEach(e => e.removeAttribute("onclick"));
+            `);
+        });
     }
 });
 

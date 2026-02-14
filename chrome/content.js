@@ -90,7 +90,7 @@ async function emoteWhitelistMenu() {
                 button.setAttribute("onclick", `
                     event.preventDefault();
                     event.stopImmediatePropagation();
-                    var emoteElement = event.target.closest("[data-test-selector="emote-button-clickable"]");
+                    var emoteElement = event.target.closest("[data-test-selector='emote-button-clickable']");
                     if(emoteElement){
                         var img = emoteElement.querySelector("img");
                         if(img){
@@ -124,7 +124,7 @@ async function emoteWhitelistMenu() {
         
                 btn.setAttribute("onclick", `
                     var section = this.closest(".emote-picker__content-block");
-                    var emotes = section.querySelectorAll("[data-test-selector=\"emote-button-clickable\"]");
+                    var emotes = section.querySelectorAll("[data-test-selector='emote-button-clickable']");
                     Promise.resolve(getValue("whitelistedEmotes", {})).then(result => {
                         var map = new Map(Object.entries(result));
                         emotes.forEach(e => {
@@ -414,14 +414,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }
 
     if(msg.action === "open-emote-selector")  {
-        if(!isVisible(document.querySelector("div.emote-picker__tab-content"))) document.querySelector("[data-a-target=\"emote-picker-button\"]")?.click();
+        if(!isVisible(document.querySelector("div.emote-picker__tab-content"))) document.querySelector("[data-a-target='emote-picker-button']")?.click();
         setTimeout(async() => emoteWhitelistMenu(), 500)
         alert("Click Emotes In The Emote Selector To Whitelist Them.");
-        document.querySelector("[data-test-selector=\"emote-picker-close\"], [data-a-target=\"emote-picker-button\"]").setAttribute("onclick", `
-            document.querySelectorAll(".emote-picker__scroll-container [data-test-selector=\"emote-button-clickable\"]").forEach(e => e.removeAttribute("onclick"));
-            document.querySelectorAll(".whitelist-all-emotes").forEach(button => button.remove());
-            this.removeAttribute("onclick");
-        `);
+        document.querySelectorAll("[data-test-selector='emote-picker-close'], [data-a-target='emote-picker-button']").forEach(el => {
+            el.setAttribute("onclick", `
+                document.querySelectorAll(".emote-picker__scroll-container [data-test-selector='emote-button-clickable']").forEach(e => e.removeAttribute("onclick"));
+                document.querySelectorAll(".whitelist-all-emotes").forEach(button => button.remove());
+                document.querySelectorAll("[data-test-selector='emote-picker-close'], [data-a-target='emote-picker-button']").forEach(e => e.removeAttribute("onclick"));
+            `);
+        });
     }
 });
 
