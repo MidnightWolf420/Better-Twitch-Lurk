@@ -85,17 +85,19 @@ function isDate(value) {
 
 async function emoteWhitelistMenu() {
     function attachHandlers() {
-        document.querySelectorAll(".emote-picker__scroll-container [data-test-selector=\"emote-button-clickable\"]").forEach(button => {
+        document.querySelectorAll(".emote-picker__scroll-container .emote-button button").forEach(button => {
             if (!button.getAttribute("onclick")) {
                 button.setAttribute("onclick", `
                     event.preventDefault();
                     event.stopImmediatePropagation();
-                    var emoteElement = event.target.closest("[data-test-selector='emote-button-clickable']");
+                    var emoteElement = event.target.closest(".emote-button");
                     if(emoteElement){
                         var img = emoteElement.querySelector("img");
                         if(img){
                             var name = img.getAttribute("alt");
-                            var id = img.src.match(/\\/emoticons\\/v2\\/([^\\/]+)\\/default/)[1];
+                            var match = img.src.match(/\\/emoticons\\/v2\\/([^\\/]+)\\/default/);
+                            if(!match) return;
+                            var id = match[1];
                             Promise.resolve(getValue("whitelistedEmotes", {})).then(function(result){
                                 var whitelistedEmotes = new Map(Object.entries(result));
                                 if(!whitelistedEmotes.has(id)){
@@ -107,47 +109,45 @@ async function emoteWhitelistMenu() {
                     }
                 `);
             }
-        })
+        });
 
         document.querySelectorAll(".emote-picker__content-block").forEach(section => {
             try {
                 var header = section.querySelector("strong")?.parentElement;
                 if (!header || header.querySelector(".whitelist-all-emotes")) return;
-        
+
                 var btn = document.createElement("button");
                 btn.textContent = "Add All";
                 btn.className = "whitelist-all-emotes";
                 btn.style = "display:inline-flex; align-items:center; justify-content:center; padding:6px 12px; font-size:14px; font-weight:600; line-height:1; color:#fff; background-color:#7c4dff; border:1px solid transparent; border-radius:4px; cursor:pointer; transition:0.2s; margin-left:8px;";
-        
-                ["mouseover","focus"].forEach(evt => btn.addEventListener(evt, () => btn.style.backgroundColor="#6441a5"));
-                ["mouseout","blur"].forEach(evt => btn.addEventListener(evt, () => btn.style.backgroundColor="#7c4dff"));
-        
+
+                ["mouseover", "focus"].forEach(evt => btn.addEventListener(evt, () => btn.style.backgroundColor = "#6441a5"));
+                ["mouseout", "blur"].forEach(evt => btn.addEventListener(evt, () => btn.style.backgroundColor = "#7c4dff"));
+
                 btn.setAttribute("onclick", `
+                    event.preventDefault();
+                    event.stopPropagation();
                     var section = this.closest(".emote-picker__content-block");
-                    var emotes = section.querySelectorAll("[data-test-selector='emote-button-clickable']");
+                    var imgs = section.querySelectorAll(".emote-button img");
                     Promise.resolve(getValue("whitelistedEmotes", {})).then(result => {
                         var map = new Map(Object.entries(result));
-                        emotes.forEach(e => {
-                            var img = e.querySelector("img");
-                            if (img) {
-                                var match = img.src.match(/\\/emoticons\\/v2\\/([^\\/]+)\\/default/);
-                                if (match && !map.has(match[1])) map.set(match[1], { id: match[1], token: img.alt });
-                            }
+                        imgs.forEach(img => {
+                            var match = img.src.match(/\\/emoticons\\/v2\\/([^\\/]+)\\/default/);
+                            if (match && !map.has(match[1])) map.set(match[1], { id: match[1], token: img.alt });
                         });
                         setValue("whitelistedEmotes", Object.fromEntries(map));
                     });
                 `);
-        
+
                 header.appendChild(btn);
-            } catch (e) {}
-        });             
+            } catch (e) { }
+        });
     }
 
     const interval = setInterval(() => {
         const targetElement = document.querySelector(".emote-picker__tab-content");
         if (!targetElement || targetElement.offsetParent === null) {
             clearInterval(interval);
-
             return;
         }
         attachHandlers();
@@ -262,7 +262,7 @@ async function clickEmoteSection(emote) {
             sectionName = "Global";
             break;
         default:
-            if(emote.owner) {
+            if (emote.owner) {
                 selector = `category-ref-${emote.owner.displayName}`;
                 sectionName = emote.owner.displayName;
             }
@@ -291,63 +291,43 @@ async function sleep(ms) {
 }
 
 async function selectEmotes(emotes) {
-    document.querySelectorAll(".emote-picker__scroll-container [data-test-selector=\"emote-button-clickable\"]")?.forEach(e => e.removeAttribute("onclick"));
-    setChatInputValue("")
-    setTimeout(async () => {
-        let customMessage = await getSetting("customMessage", "");
-        console.log(customMessage)
-        if(customMessage && customMessage.length > 0) setChatInputValue(`${customMessage} `)
-    }, randomInteger(300, 600))
-
-    for (let emote of emotes) {
-        clickEmoteSection(emote);
-        await sleep(randomInteger(300, 600));
-        let emoteButtonSelector = `button[data-test-selector="emote-button-clickable"]:has(img[src*="${emote.id}"])`;
-        await waitForElementVisible(emoteButtonSelector, 5000, false)
-        await sleep(randomInteger(300, 600))
-        const emoteButton = document.querySelector(emoteButtonSelector);
-        emoteButton.click();
-        console.log(`[BetterTwitchLurk] Clicked Emote "${emote.token}"`);
-        await sleep(randomInteger(300, 600));
-    }
+    const customMessage = ((await getSetting("customMessage", "")) || "").trim();
+    const emoteText = emotes.map(e => e.token).join(" ");
+    setChatInputValue(customMessage ? `${customMessage} ${emoteText}` : emoteText);
+    console.log(`[BetterTwitchLurk] Selected Emote${emotes.length > 1 ? "s" : ""}: ${emotes.map(e => e.token).join(", ")}`);
+    await sleep(randomInteger(300, 600));
 }
 
 async function sendMessage(emoteCount) {
-    if((adsFinishedAt && isDate(adsFinishedAt) && !isAdPlaying && (Date.now() - adsFinishedAt.getTime() < 25000)) || isAdPlaying) return;
+    if ((adsFinishedAt && isDate(adsFinishedAt) && !isAdPlaying && (Date.now() - adsFinishedAt.getTime() < 25000)) || isAdPlaying) return;
     let delay = Math.round(randomFloat(13, 15) * 60 * 1000);
-    await waitForElementsVisible("[data-a-target=\"chat-input\"] [data-a-target=\"emote-name\"]", emoteCount, 5000, false);
+    await waitForElementVisible("[data-a-target=\"chat-send-button\"]", 5000, false);
+    await sleep(randomInteger(300, 600));
     document.querySelector("[data-a-target=\"chat-send-button\"]")?.click();
     try {
         await waitForElementVisible("[data-test-selector=\"chat-rules-ok-button\"]", 3000, true);
-        document.querySelector("[data-test-selector=\"chat-rules-ok-button\"]")?.click()
-        await sleep(randomInteger(300, 600))
-    } catch {}
+        document.querySelector("[data-test-selector=\"chat-rules-ok-button\"]")?.click();
+        await sleep(randomInteger(300, 600));
+    } catch { }
     let nextMessageAt = new Date(Date.now() + delay);
     await saveSetting(channel?.login, { lastMessage: new Date(), nextMessage: nextMessageAt }, "lastMessage");
-    console.log(`[BetterTwitchLurk] Sent ${emoteCount} Emote${emoteCount>1?"s":""}`);
+    console.log(`[BetterTwitchLurk] Sent ${emoteCount} Emote${emoteCount > 1 ? "s" : ""}`);
 }
 
 async function sendEmotes() {
     if (await getSetting("autoEmoteEnabled", false)) {
-        if((adsFinishedAt && isDate(adsFinishedAt) && !isAdPlaying && (Date.now() - adsFinishedAt.getTime() < 25000)) || isAdPlaying) return;
-        if(emoteList && emoteList.length > 0) {
-            let emoteCount = (await getSetting("useRange", false))?{ min: await getSetting("emoteMin", 1), max: await getSetting("emoteMax", 3) }:await getSetting("emoteCount", 1);
+        if ((adsFinishedAt && isDate(adsFinishedAt) && !isAdPlaying && (Date.now() - adsFinishedAt.getTime() < 25000)) || isAdPlaying) return;
+        if (emoteList && emoteList.length > 0) {
+            let emoteCount = (await getSetting("useRange", false)) ? { min: await getSetting("emoteMin", 1), max: await getSetting("emoteMax", 3) } : await getSetting("emoteCount", 1);
             let newCount = emoteCount;
             if (typeof emoteCount === "object" && !isNaN(emoteCount.min) && !isNaN(emoteCount.max)) {
                 newCount = randomInteger(emoteCount.min, emoteCount.max);
             }
-            console.log(`[BetterTwitchLurk] Selecting ${newCount} Emote${newCount>1?"s":""}`);
+            console.log(`[BetterTwitchLurk] Selecting ${newCount} Emote${newCount > 1 ? "s" : ""}`);
             if (document.querySelector("[data-a-target=\"chat-scroller\"]")) {
-                if (isVisible(document.querySelector("div.emote-picker__tab-content"))) {
-                    await selectEmotes(await getRandomEmotes(newCount));
-                } else {
-                    document.querySelector("[data-a-target=\"emote-picker-button\"]").click();
-                    await waitForElementVisible("[data-a-target=\"emote-picker-button\"]", 5000, false);
-                    await sleep(randomInteger(300, 600))
-                    await selectEmotes(await getRandomEmotes(newCount));
-                }
+                await selectEmotes(await getRandomEmotes(newCount));
                 const delay = Math.round(randomFloat(13, 15) * 60 * 1000);
-                let nextMessageAt =  new Date(Date.now() + delay);
+                let nextMessageAt = new Date(Date.now() + delay);
                 await saveSetting(channel?.login, { lastMessage: new Date(), nextMessage: nextMessageAt }, "lastMessage");
                 await sendMessage(newCount);
             }
@@ -355,50 +335,50 @@ async function sendEmotes() {
     }
 }
 
-window.addEventListener("BetterTwitchLurk", async(event) => {
-    if(event.detail.type === "EmotesUpdated") {
+window.addEventListener("BetterTwitchLurk", async (event) => {
+    if (event.detail.type === "EmotesUpdated") {
         console.log(`[BetterTwitchLurk] Updated List Of Emotes`);
         emoteList = event.detail.data.emoteList;
-    } else if(event.detail.type === "ChannelName") {
+    } else if (event.detail.type === "ChannelName") {
         oldChannel = channel;
         channel = event.detail.data;
-        if(channel?.login !== oldChannel?.login) {
+        if (channel?.login !== oldChannel?.login) {
             console.log("[BetterTwitchLurk] Updated Channel Name:", channel?.login);
             isFollowing = false;
         }
-    } else if(event.detail.type === "CurrentUser") {
+    } else if (event.detail.type === "CurrentUser") {
         currentUser = event.detail.data;
-    } else if(event.detail.type === "ChannelLive") {
+    } else if (event.detail.type === "ChannelLive") {
         const newStreamInfo = event.detail.data;
         if (!streamInfo || streamInfo.isLive !== newStreamInfo.isLive || streamInfo.user?.login !== newStreamInfo.user?.login) {
             console.log(`[BetterTwitchLurk] ${newStreamInfo.user.login} is ${newStreamInfo.isLive ? `Live and started stream at ${(new Date(newStreamInfo.startedAt)).toLocaleString().toUpperCase()}` : "Not Live"}`);
         }
         oldStreamInfo = streamInfo;
         streamInfo = newStreamInfo;
-    } else if(event.detail.type === "MessageSent") {
+    } else if (event.detail.type === "MessageSent") {
         let sentAt = new Date(event.detail.data.sentAt);
         let nextMessageAt = new Date(sentAt.getTime() + Math.round(randomFloat(13, 15) * 60 * 1000))
         saveSetting(channel?.login, { lastMessage: sentAt, nextMessage: nextMessageAt }, "lastMessage");
         console.log("[BetterTwitchLurk] Updated Last Message Sent At:", sentAt.toLocaleString().toUpperCase());
-    } else if(event.detail.type === "RaidingOut") {
-        if(await getSetting("raidDisable", false) && await getSetting("autoEmoteEnabled", false)) {
+    } else if (event.detail.type === "RaidingOut") {
+        if (await getSetting("raidDisable", false) && await getSetting("autoEmoteEnabled", false)) {
             console.log(`[BetterTwitchLurk] Streamer Is Raiding Out Disabling Auto Emote`);
             await saveSetting("autoEmoteEnabled", false);
         }
-    } else if(event.detail.type === "FollowingChannel") {
+    } else if (event.detail.type === "FollowingChannel") {
         isFollowing = event?.detail?.data?.isFollowing;
-        if(event.detail.data.eventName === "FollowUser") {
-            console.log(`[BetterTwitchLurk] You Followed ${event?.detail?.data?.user?.displayName||event?.detail?.data?.user?.login}`);
-        } else if(event.detail.data.eventName === "UnfollowUser") {
-            console.log(`[BetterTwitchLurk] You Unfollowed ${event?.detail?.data?.user?.displayName||event?.detail?.data?.user?.login}`);
+        if (event.detail.data.eventName === "FollowUser") {
+            console.log(`[BetterTwitchLurk] You Followed ${event?.detail?.data?.user?.displayName || event?.detail?.data?.user?.login}`);
+        } else if (event.detail.data.eventName === "UnfollowUser") {
+            console.log(`[BetterTwitchLurk] You Unfollowed ${event?.detail?.data?.user?.displayName || event?.detail?.data?.user?.login}`);
         } else {
-            console.log(`[BetterTwitchLurk] You ${isFollowing?"Are":"Are Not"} Following ${event?.detail?.data?.user?.displayName||event?.detail?.data?.user?.login}`);
+            console.log(`[BetterTwitchLurk] You ${isFollowing ? "Are" : "Are Not"} Following ${event?.detail?.data?.user?.displayName || event?.detail?.data?.user?.login}`);
         }
-    } else if(event.detail.type === "AdPlaying") {
+    } else if (event.detail.type === "AdPlaying") {
         let oldAdPlayingState = isAdPlaying;
         isAdPlaying = event?.detail?.data?.isAdPlaying;
-        if(isAdPlaying) {
-            if(oldAdPlayingState != isAdPlaying) {
+        if (isAdPlaying) {
+            if (oldAdPlayingState != isAdPlaying) {
                 console.log("[BetterTwitchLurk] Ads Just Started Playing");
             }
         } else {
@@ -419,13 +399,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         return true;
     }
 
-    if(msg.action === "open-emote-selector")  {
-        if(!isVisible(document.querySelector("div.emote-picker__tab-content"))) document.querySelector("[data-a-target='emote-picker-button']")?.click();
-        setTimeout(async() => emoteWhitelistMenu(), 500)
+    if (msg.action === "open-emote-selector") {
+        if (!isVisible(document.querySelector("div.emote-picker__tab-content"))) document.querySelector("[data-a-target='emote-picker-button']")?.click();
+        setTimeout(async () => emoteWhitelistMenu(), 500)
         alert("Click Emotes In The Emote Selector To Whitelist Them.");
         document.querySelectorAll("[data-test-selector='emote-picker-close'], [data-a-target='emote-picker-button']").forEach(el => {
             el.setAttribute("onclick", `
-                document.querySelectorAll(".emote-picker__scroll-container [data-test-selector='emote-button-clickable']").forEach(e => e.removeAttribute("onclick"));
+                document.querySelectorAll(".emote-picker__scroll-container .emote-button button").forEach(e => e.removeAttribute("onclick"));
                 document.querySelectorAll(".whitelist-all-emotes").forEach(button => button.remove());
                 document.querySelectorAll("[data-test-selector='emote-picker-close'], [data-a-target='emote-picker-button']").forEach(e => e.removeAttribute("onclick"));
             `);
@@ -433,7 +413,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }
 });
 
-async function runAutoSendLoop() {    
+async function runAutoSendLoop() {
     if (isSending) {
         return setTimeout(runAutoSendLoop, 1000);
     }
@@ -441,8 +421,8 @@ async function runAutoSendLoop() {
     isSending = true;
     try {
         const autoEnabled = await getSetting("autoEmoteEnabled", false);
-        if(!autoEnabled || !channel?.login || !streamInfo?.isLive || (await getSetting("followedOnly", false) && !isFollowing) || currentUser.login === channel.login) return;
-        if((adsFinishedAt && isDate(adsFinishedAt) && !isAdPlaying && (Date.now() - adsFinishedAt.getTime() < timerAfterAds)) || isAdPlaying) return;
+        if (!autoEnabled || !channel?.login || !streamInfo?.isLive || (await getSetting("followedOnly", false) && !isFollowing) || currentUser.login === channel.login) return;
+        if ((adsFinishedAt && isDate(adsFinishedAt) && !isAdPlaying && (Date.now() - adsFinishedAt.getTime() < timerAfterAds)) || isAdPlaying) return;
         const data = await getSetting(channel?.login, null, "lastMessage");
         const now = Date.now();
         const nextMsgTime = data?.nextMessage ? new Date(data.nextMessage).getTime() : now;
@@ -450,7 +430,7 @@ async function runAutoSendLoop() {
         if (!data || now >= nextMsgTime) {
             await sendEmotes();
         }
-    } catch {} finally {
+    } catch { } finally {
         isSending = false;
         setTimeout(runAutoSendLoop, 1000);
     }
